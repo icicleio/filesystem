@@ -1,5 +1,5 @@
 {
-    "name": "icicleio/file",
+    "name": "icicleio/filesystem",
     "description": "Asynchronous filesystem component for Icicle.",
     "keywords": [
         "asynchronous",
