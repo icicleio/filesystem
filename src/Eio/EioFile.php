@@ -451,7 +451,7 @@ class EioFile implements FileInterface
                 function ($data, $result, $req) use ($resolve, $reject) {
                     if (-1 === $result) {
                         $reject(new FileException(
-                            sprintf('Changing the file owner failed: %s.', \eio_get_last_error($req))
+                            sprintf('Changing the file owner or group failed: %s.', \eio_get_last_error($req))
                         ));
                     } else {
                         $resolve(true);
@@ -490,7 +490,7 @@ class EioFile implements FileInterface
                 function ($data, $result, $req) use ($resolve, $reject) {
                     if (-1 === $result) {
                         $reject(new FileException(
-                            sprintf('Changing the file owner failed: %s.', \eio_get_last_error($req))
+                            sprintf('Changing the file mode failed: %s.', \eio_get_last_error($req))
                         ));
                     } else {
                         $resolve(true);

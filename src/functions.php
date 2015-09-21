@@ -120,6 +120,22 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     /**
      * @coroutine
      *
+     * @param string $path
+     *
+     * @return \Generator
+     *
+     * @resolve array
+     *
+     * @throws \Icicle\File\Exception\FileException If getting the file stats fails.
+     */
+    function stat($path)
+    {
+        return driver()->stat($path);
+    }
+
+    /**
+     * @coroutine
+     *
      * @param string $oldPath
      * @param string $newPath
      *
@@ -179,9 +195,9 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If determining if the path is a file fails.
      */
-    function isFile($path)
+    function isfile($path)
     {
-        return driver()->isFile($path);
+        return driver()->isfile($path);
     }
 
     /**
@@ -195,8 +211,96 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If determining if the path is a directory fails.
      */
-    function isDir($path)
+    function isdir($path)
     {
-        return driver()->isDir($path);
+        return driver()->isdir($path);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     * @param int $mode
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    function mkdir($path, $mode = 0755)
+    {
+        return driver()->mkdir($path, $mode);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param $path
+     *
+     * @return \Generator
+     *
+     * @resolve string[]
+     */
+    function readdir($path)
+    {
+        return driver()->readdir($path);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param $path
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    function rmdir($path)
+    {
+        return driver()->rmdir($path);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     * @param int $uid
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    function chown($path, $uid)
+    {
+        return driver()->chown($path, $uid);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     * @param int $gid
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    function chgrp($path, $gid)
+    {
+        return driver()->chgrp($path, $gid);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     * @param int $mode
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    function chmod($path, $mode)
+    {
+        return driver()->chmod($path, $mode);
     }
 }

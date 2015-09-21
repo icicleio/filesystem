@@ -9,6 +9,25 @@ use Icicle\Promise\Promise;
 class EioDriver implements DriverInterface
 {
     /**
+     * @var string[]
+     */
+    private static $statKeys = [
+        0  => 'dev',
+        1  => 'ino',
+        2  => 'mode',
+        3  => 'nlink',
+        4  => 'uid',
+        5  => 'gid',
+        6  => 'rdev',
+        7  => 'size',
+        8  => 'atime',
+        9  => 'mtime',
+        10 => 'ctime',
+        11 => 'blksize',
+        12 => 'blocks',
+    ];
+
+    /**
      * @var \Icicle\File\Eio\EioPoll
      */
     private $poll;
@@ -20,14 +39,6 @@ class EioDriver implements DriverInterface
         }
 
         $this->poll = new EioPoll();
-    }
-
-    /**
-     * Should be called after forking.
-     */
-    public function reInit()
-    {
-        $this->poll->reInit();
     }
 
     /**
@@ -258,16 +269,23 @@ class EioDriver implements DriverInterface
         $this->poll->listen();
 
         try {
-            yield $promise;
+            $stat = (yield $promise);
         } finally {
             $this->poll->done();
         }
+
+        $numeric = [];
+        foreach (self::$statKeys as $key => $name) {
+            $numeric[$key] = $stat[$name];
+        }
+
+        yield array_merge($numeric, $stat);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function isFile($path)
+    public function isfile($path)
     {
         try {
             $result = (yield $this->stat($path));
@@ -280,7 +298,7 @@ class EioDriver implements DriverInterface
     /**
      * {@inheritdoc}
      */
-    public function isDir($path)
+    public function isdir($path)
     {
         try {
             $result = (yield $this->stat($path));
@@ -334,5 +352,211 @@ class EioDriver implements DriverInterface
         $written = (yield $file->copy($target));
         $file->close();
         yield $written;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function mkdir($path, $mode = 0755)
+    {
+        $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode) {
+            $resource = \eio_mkdir($path, $mode, null, function ($data, $result, $req) use ($resolve, $reject) {
+                if (-1 === $result) {
+                    $reject(new FileException(
+                        sprintf('Could not create directory: %s.', \eio_get_last_error($req))
+                    ));
+                } else {
+                    $resolve(true);
+                }
+            });
+
+            if (false === $resource) {
+                throw new FileException('Could not create directory.');
+            }
+
+            return function () use ($resource) {
+                \eio_cancel($resource);
+            };
+        });
+
+        $this->poll->listen();
+
+        try {
+            yield $promise;
+        } finally {
+            $this->poll->done();
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function readdir($path)
+    {
+        $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
+            $resource = \eio_readdir($path, 0, null, function ($data, $result, $req) use ($resolve, $reject) {
+                if (-1 === $result) {
+                    $reject(new FileException(
+                        sprintf('Could not create directory: %s.', \eio_get_last_error($req))
+                    ));
+                } else {
+                    $result = $result['names'];
+                    sort($result, \SORT_STRING | \SORT_NATURAL | \SORT_FLAG_CASE);
+                    $resolve($result);
+                }
+            });
+
+            if (false === $resource) {
+                throw new FileException('Could not create directory.');
+            }
+
+            return function () use ($resource) {
+                \eio_cancel($resource);
+            };
+        });
+
+        $this->poll->listen();
+
+        try {
+            yield $promise;
+        } finally {
+            $this->poll->done();
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function rmdir($path)
+    {
+        $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
+            $resource = \eio_rmdir($path, null, function ($data, $result, $req) use ($resolve, $reject) {
+                if (-1 === $result) {
+                    $reject(new FileException(
+                        sprintf('Could not remove directory: %s.', \eio_get_last_error($req))
+                    ));
+                } else {
+                    $resolve(true);
+                }
+            });
+
+            if (false === $resource) {
+                throw new FileException('Could not remove directory.');
+            }
+
+            return function () use ($resource) {
+                \eio_cancel($resource);
+            };
+        });
+
+        $this->poll->listen();
+
+        try {
+            yield $promise;
+        } finally {
+            $this->poll->done();
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function chown($path, $uid)
+    {
+        return $this->chowngrp($path, $uid, -1);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function chgrp($path, $gid)
+    {
+        return $this->chowngrp($path, -1, $gid);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param int $uid
+     * @param int $gid
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    private function chowngrp($path, $uid, $gid)
+    {
+        $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $uid, $gid) {
+            $resource = @\eio_chown(
+                $path,
+                $uid,
+                $gid,
+                null,
+                function ($data, $result, $req) use ($resolve, $reject) {
+                    if (-1 === $result) {
+                        $reject(new FileException(
+                            sprintf('Changing the owner or group failed: %s.', \eio_get_last_error($req))
+                        ));
+                    } else {
+                        $resolve(true);
+                    }
+                }
+            );
+
+            if (false === $resource) {
+                throw new FileException('File not found or invalid uid and/or gid.');
+            }
+
+            return function () use ($resource) {
+                \eio_cancel($resource);
+            };
+        });
+
+        $this->poll->listen();
+
+        try {
+            yield $promise;
+        } finally {
+            $this->poll->done();
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function chmod($path, $mode)
+    {
+        $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode) {
+            $resource = \eio_fchmod(
+                $path,
+                $mode,
+                null,
+                function ($data, $result, $req) use ($resolve, $reject) {
+                    if (-1 === $result) {
+                        $reject(new FileException(
+                            sprintf('Changing the owner failed: %s.', \eio_get_last_error($req))
+                        ));
+                    } else {
+                        $resolve(true);
+                    }
+                }
+            );
+
+            if (false === $resource) {
+                throw new FileException('File not found or invalid mode.');
+            }
+
+            return function () use ($resource) {
+                \eio_cancel($resource);
+            };
+        });
+
+        $this->poll->listen();
+
+        try {
+            yield $promise;
+        } finally {
+            $this->poll->done();
+        }
     }
 }

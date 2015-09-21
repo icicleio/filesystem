@@ -62,28 +62,14 @@ class FileTask implements TaskInterface
 
             switch ($this->operation) {
                 case 'fread':
-                    return $file->read($this->args[0]);
-
                 case 'fwrite':
-                    return $file->write($this->args[0]);
-
                 case 'fseek':
-                    return $file->seek($this->args[0], $this->args[1]);
-
                 case 'fstat':
-                    return $file->stat();
-
                 case 'ftruncate':
-                    return $file->truncate($this->args[0]);
-
                 case 'fchown':
-                    return $file->chown($this->args[0]);
-
                 case 'fchgrp':
-                    return $file->chgrp($this->args[0]);
-
                 case 'fchmod':
-                    return $file->chmod($this->args[0]);
+                    return call_user_func_array([$file, substr($this->operation, 1)], $this->args);
 
                 default:
                     throw new InvalidArgumentError('Invalid operation.');
@@ -92,25 +78,19 @@ class FileTask implements TaskInterface
 
         switch ($this->operation) {
             case 'stat':
-                return $this->stat($this->args[0]);
-
             case 'unlink':
-                return $this->unlink($this->args[0]);
-
             case 'rename':
-                return $this->rename($this->args[0], $this->args[1]);
-
             case 'copy':
-                return $this->copy($this->args[0], $this->args[1]);
-
             case 'symlink':
-                return $this->symlink($this->args[0], $this->args[1]);
-
-            case 'isFile':
-                return $this->isFile($this->args[0]);
-
-            case 'isDir':
-                return $this->isDir($this->args[0]);
+            case 'isfile':
+            case 'isdir':
+            case 'mkdir':
+            case 'readdir':
+            case 'rmdir':
+            case 'chmod':
+            case 'chown':
+            case 'chgrp':
+                return call_user_func_array([$this, $this->operation], $this->args);
 
             default:
                 throw new InvalidArgumentError('Invalid operation.');
@@ -185,7 +165,7 @@ class FileTask implements TaskInterface
      *
      * @return bool
      */
-    private function isFile($path)
+    private function isfile($path)
     {
         return is_file($path);
     }
@@ -195,7 +175,7 @@ class FileTask implements TaskInterface
      *
      * @return bool
      */
-    private function isDir($path)
+    private function isdir($path)
     {
         return is_dir($path);
     }
@@ -233,6 +213,132 @@ class FileTask implements TaskInterface
     {
         if (!symlink($source, $target)) {
             $message = 'Could not create symlink.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $path
+     * @param int $mode
+     *
+     * @return bool
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function mkdir($path, $mode = 0755)
+    {
+        if (!@mkdir($path, $mode)) {
+            $message = 'Could not create directory.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return array
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function readdir($path)
+    {
+        $result = @scandir($path);
+
+        if (false === $result) {
+            $message = 'Could not read directory.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return array_diff($result, ['.', '..']);
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return bool
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function rmdir($path)
+    {
+        if (!@rmdir($path)) {
+            $message = 'Could not remove directory.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $path
+     * @param int $owner
+     *
+     * @return bool
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function chown($path, $owner)
+    {
+        if (!chown($path, (int) $owner)) {
+            $message = 'Could not change file owner.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $path
+     * @param int $group
+     *
+     * @return bool
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function chgrp($path, $group)
+    {
+        if (!chgrp($path, (int) $group)) {
+            $message = 'Could not change file group.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $path
+     * @param int $mode
+     *
+     * @return bool
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function chmod($path, $mode)
+    {
+        if (!chmod($path, (int) $mode)) {
+            $message = 'Could not change file mode.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
             }

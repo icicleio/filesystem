@@ -35,6 +35,19 @@ interface DriverInterface
     /**
      * @coroutine
      *
+     * @param string $path
+     *
+     * @return \Generator
+     *
+     * @resolve array
+     *
+     * @throws \Icicle\File\Exception\FileException If getting the file stats fails.
+     */
+    public function stat($path);
+
+    /**
+     * @coroutine
+     *
      * @param string $source
      * @param string $target
      *
@@ -82,7 +95,7 @@ interface DriverInterface
      *
      * @resolve bool
      */
-    //public function mkDir($path, $mode = 0777);
+    public function mkdir($path, $mode = 0777);
 
     /**
      * @coroutine
@@ -91,9 +104,20 @@ interface DriverInterface
      *
      * @return \Generator
      *
-     * @resolve \Icicle\File\DirectoryInterface
+     * @resolve string[]
      */
-    //public function openDir($path);
+    public function readdir($path);
+
+    /**
+     * @coroutine
+     *
+     * @param $path
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    public function rmdir($path);
 
     /**
      * @coroutine
@@ -104,7 +128,7 @@ interface DriverInterface
      *
      * @resolve bool
      */
-    public function isFile($path);
+    public function isfile($path);
 
     /**
      * @coroutine
@@ -115,5 +139,41 @@ interface DriverInterface
      *
      * @resolve bool
      */
-    public function isDir($path);
+    public function isdir($path);
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     * @param int $uid
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    public function chown($path, $uid);
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     * @param int $gid
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    public function chgrp($path, $gid);
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     * @param int $mode
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     */
+    public function chmod($path, $mode);
 }

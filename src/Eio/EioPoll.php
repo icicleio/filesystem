@@ -15,18 +15,14 @@ class EioPoll
         $this->poll = $this->createPoll();
     }
 
-    public function reInit()
-    {
-        $this->poll->free();
-
-        \eio_init();
-        $this->poll = $this->createPoll();
-        $this->requests = 0;
-    }
-
     public function listen()
     {
         if (0 === $this->requests++) {
+            if ($this->poll->isFreed()) {
+                \eio_init();
+                $this->poll = $this->createPoll();
+            }
+
             $this->poll->listen();
         }
     }

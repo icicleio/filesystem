@@ -2,7 +2,7 @@
 namespace Icicle\File\Concurrent;
 
 use Icicle\Concurrent\Exception\TaskException;
-use Icicle\Concurrent\Worker\Pool;
+use Icicle\Concurrent\Worker;
 use Icicle\Concurrent\Worker\PoolInterface;
 use Icicle\Concurrent\Worker\WorkerFactory;
 use Icicle\Concurrent\Worker\WorkerFactoryInterface;
@@ -28,7 +28,7 @@ class ConcurrentDriver implements DriverInterface
     public function __construct(WorkerFactoryInterface $factory = null, PoolInterface $pool = null)
     {
         $this->factory = $factory ?: new WorkerFactory();
-        $this->pool = $pool ?: new Pool();
+        $this->pool = $pool ?: Worker\pool();
 
         if (!$this->pool->isRunning()) {
             $this->pool->start();
@@ -70,6 +70,18 @@ class ConcurrentDriver implements DriverInterface
     /**
      * {@inheritdoc}
      */
+    public function stat($path)
+    {
+        try {
+            yield $this->pool->enqueue(new Internal\FileTask('stat', [(string) $path]));
+        } catch (TaskException $exception) {
+            throw new FileException('Stating the file failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function rename($oldPath, $newPath)
     {
         try {
@@ -82,10 +94,10 @@ class ConcurrentDriver implements DriverInterface
     /**
      * {@inheritdoc}
      */
-    public function isFile($path)
+    public function isfile($path)
     {
         try {
-            yield $this->pool->enqueue(new Internal\FileTask('isFile', [(string) $path]));
+            yield $this->pool->enqueue(new Internal\FileTask('isfile', [(string) $path]));
         } catch (TaskException $exception) {
             throw new FileException('Determining if path is a file failed.', 0, $exception);
         }
@@ -94,10 +106,10 @@ class ConcurrentDriver implements DriverInterface
     /**
      * {@inheritdoc}
      */
-    public function isDir($path)
+    public function isdir($path)
     {
         try {
-            yield $this->pool->enqueue(new Internal\FileTask('isDir', [(string) $path]));
+            yield $this->pool->enqueue(new Internal\FileTask('isdir', [(string) $path]));
         } catch (TaskException $exception) {
             throw new FileException('Determine if the path is a directory failed.', 0, $exception);
         }
@@ -121,6 +133,78 @@ class ConcurrentDriver implements DriverInterface
             yield $this->pool->enqueue(new Internal\FileTask('copy', [(string) $source, (string) $target]));
         } catch (TaskException $exception) {
             throw new FileException('Copying the file failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function mkdir($path, $mode = 0755)
+    {
+        try {
+            yield $this->pool->enqueue(new Internal\FileTask('mkdir', [(string) $path, (int) $mode]));
+        } catch (TaskException $exception) {
+            throw new FileException('Creating the directory failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function readdir($path)
+    {
+        try {
+            yield $this->pool->enqueue(new Internal\FileTask('readdir', [(string) $path]));
+        } catch (TaskException $exception) {
+            throw new FileException('Reading the directory failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function rmdir($path)
+    {
+        try {
+            yield $this->pool->enqueue(new Internal\FileTask('rmdir', [(string) $path]));
+        } catch (TaskException $exception) {
+            throw new FileException('Reading the directory failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function chmod($path, $mode)
+    {
+        try {
+            yield $this->pool->enqueue(new Internal\FileTask('chmod', [(string) $path, (int) $mode]));
+        } catch (TaskException $exception) {
+            throw new FileException('Creating the directory failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function chown($path, $uid)
+    {
+        try {
+            yield $this->pool->enqueue(new Internal\FileTask('chown', [(string) $path, (int) $uid]));
+        } catch (TaskException $exception) {
+            throw new FileException('Creating the directory failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function chgrp($path, $gid)
+    {
+        try {
+            yield $this->pool->enqueue(new Internal\FileTask('chgrp', [(string) $path, (int) $gid]));
+        } catch (TaskException $exception) {
+            throw new FileException('Creating the directory failed.', 0, $exception);
         }
     }
 }
