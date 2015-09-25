@@ -1,0 +1,29 @@
+language: php
+
+php:
+  - 5.5
+  - 5.6
+  - 7.0
+
+sudo: false
+
+install:
+  - if [ "$TRAVIS_PHP_VERSION" != "7.0" ]; then
+        curl -LS https://pecl.php.net/get/eio | tar -xz;
+        pushd eio-*;
+        phpize;
+        ./configure;
+        make;
+        make install;
+        popd;
+        echo "extension=eio.so" >> "$(php -r 'echo php_ini_loaded_file();')";
+    fi
+  - composer self-update
+  - composer install --no-interaction --prefer-source
+
+script:
+  - vendor/bin/phpunit --coverage-text --coverage-clover build/logs/clover.xml
+
+after_script:
+  - composer require satooshi/php-coveralls dev-master
+  - vendor/bin/coveralls -v --exclude-no-stmt
