@@ -46,13 +46,13 @@ class ConcurrentDriver implements DriverInterface
         $task = new Internal\FileTask('fopen', [(string) $path, (string) $mode]);
 
         try {
-            list($size, $position) = (yield $worker->enqueue($task));
+            list($size, $append) = (yield $worker->enqueue($task));
         } catch (TaskException $exception) {
             yield $worker->shutdown();
             throw new FileException('Opening the file failed.', 0, $exception);
         }
 
-        yield new ConcurrentFile($worker, $size, $position);
+        yield new ConcurrentFile($worker, $size, $append);
     }
 
     /**

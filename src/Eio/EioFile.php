@@ -34,6 +34,11 @@ class EioFile implements FileInterface
     private $position = 0;
 
     /**
+     * @var bool
+     */
+    private $append = false;
+
+    /**
      * @var \SplQueue
      */
     private $queue;
@@ -47,14 +52,15 @@ class EioFile implements FileInterface
      * @param \Icicle\File\Eio\EioPoll $poll
      * @param int $handle
      * @param int $size
-     * @param int $position
+     * @param bool $append
      */
-    public function __construct(EioPoll $poll, $handle, $size, $position = 0)
+    public function __construct(EioPoll $poll, $handle, $size, $append = false)
     {
         $this->poll = $poll;
         $this->handle = $handle;
         $this->size = $size;
-        $this->position = $position;
+        $this->append = $append;
+        $this->position = $append ? $size : 0;
 
         $this->queue = new \SplQueue();
     }
@@ -219,17 +225,13 @@ class EioFile implements FileInterface
         }
 
         if ($timeout) {
-            //$promise = $promise->timeout($timeout);
+            $promise = $promise->timeout($timeout);
         }
 
         $this->poll->listen();
 
         try {
-            $written = (yield $promise);
-            $this->position += $written;
-            if ($this->position > $this->size) {
-                $this->size = $this->position;
-            }
+            yield $promise;
         } finally {
             if ($end) {
                 $this->close();
@@ -252,7 +254,7 @@ class EioFile implements FileInterface
                 $this->handle,
                 $data,
                 $length,
-                $this->position,
+                $this->append ? $this->size : $this->position,
                 null,
                 function ($data, $result, $req) use ($resolve, $reject, $length) {
                     if (-1 === $result) {
@@ -262,7 +264,17 @@ class EioFile implements FileInterface
                         $this->close();
                     } else {
                         $this->queue->shift();
-                        $resolve($length);
+
+                        if ($this->append) {
+                            $this->size += $result;
+                        } else {
+                            $this->position += $result;
+                            if ($this->position > $this->size) {
+                                $this->size = $this->position;
+                            }
+                        }
+
+                        $resolve($result);
                     }
                 }
             );

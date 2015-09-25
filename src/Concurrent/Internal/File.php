@@ -20,21 +20,45 @@ class File
      */
     private $mode;
 
+    /**
+     * @param string $path
+     * @param string $mode
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
     public function __construct($path, $mode)
     {
-        $handle = @fopen($path, $mode);
+        $mode = str_replace(['b', 't'], '', $mode);
 
-        if (!$handle) {
+        switch ($mode) {
+            case 'r':
+            case 'r+':
+            case 'w':
+            case 'w+':
+            case 'a':
+            case 'a+':
+            case 'x':
+            case 'x+':
+            case 'c':
+            case 'c+':
+                break;
+
+            default:
+                throw new FileException('Invalid file mode.');
+        }
+
+        $this->path = $path;
+        $this->mode = $mode;
+
+        $this->handle = @fopen($this->path, $this->mode . 'b');
+
+        if (!$this->handle) {
             $message = 'Could not open the file.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
             }
             throw new FileException($message);
         }
-
-        $this->handle = $handle;
-        $this->path = $path;
-        $this->mode = $mode;
     }
 
     public function __destruct()
@@ -42,6 +66,14 @@ class File
         if (is_resource($this->handle)) {
             fclose($this->handle);
         }
+    }
+
+    /**
+     * @return bool
+     */
+    public function inAppendMode()
+    {
+        return 'a' === $this->mode || 'a+' === $this->mode;
     }
 
     /**
@@ -55,7 +87,7 @@ class File
     {
         $data = @fread($this->handle, $length);
 
-        if (false === $data) {
+        if (false === $data || '' === $data) {
             $message = 'Could not read from the file.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);

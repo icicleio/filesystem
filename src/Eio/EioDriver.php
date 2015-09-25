@@ -34,9 +34,10 @@ class EioDriver implements DriverInterface
 
     public function __construct()
     {
+        // @codeCoverageIgnoreStart
         if (!\extension_loaded('eio')) {
             throw new FileException('Requires the eio extension.');
-        }
+        } // @codeCoverageIgnoreEnd
 
         $this->poll = new EioPoll();
     }
@@ -120,26 +121,8 @@ class EioDriver implements DriverInterface
             $this->poll->done();
         }
 
-        if ($flags & \EIO_O_TRUNC) {
-            $promise = new Promise(function (callable $resolve, callable $reject) use ($handle) {
-                $resource = \eio_ftruncate($handle, 0, null, function ($data, $result, $req) use ($resolve, $reject) {
-                    if (-1 === $result) {
-                        $reject(new FileException(
-                            sprintf('Truncating the file failed: %s.', \eio_get_last_error($req))
-                        ));
-                    } else {
-                        $resolve(0);
-                    }
-                });
-
-                if (false === $resource) {
-                    throw new FileException('Could not truncate file.');
-                }
-
-                return function () use ($resource) {
-                    \eio_cancel($resource);
-                };
-            });
+        if ($flags & \EIO_O_TRUNC) { // File truncated.
+            $size = 0;
         } else {
             $promise = new Promise(function (callable $resolve, callable $reject) use ($handle) {
                 $resource = \eio_fstat($handle, null, function ($data, $result, $req) use ($resolve, $reject) {
@@ -160,17 +143,17 @@ class EioDriver implements DriverInterface
                     \eio_cancel($resource);
                 };
             });
+
+            $this->poll->listen();
+
+            try {
+                $size = (yield $promise);
+            } finally {
+                $this->poll->done();
+            }
         }
 
-        $this->poll->listen();
-
-        try {
-            $size = (yield $promise);
-        } finally {
-            $this->poll->done();
-        }
-
-        yield new EioFile($this->poll, $handle, $size, $flags & \EIO_O_APPEND ? $size : 0);
+        yield new EioFile($this->poll, $handle, $size, (bool) ($flags & \EIO_O_APPEND));
     }
 
     /**

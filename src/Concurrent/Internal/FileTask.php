@@ -49,7 +49,7 @@ class FileTask implements TaskInterface
                 }
                 $file = new File($this->args[0], $this->args[1]);
                 $environment->set('file', $file);
-                return [$file->size(), $file->tell()];
+                return [$file->size(), $file->inAppendMode()];
             }
 
             if (!$environment->exists('file')) {

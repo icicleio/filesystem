@@ -28,6 +28,11 @@ class ConcurrentFile implements FileInterface
     /**
      * @var bool
      */
+    private $append = false;
+
+    /**
+     * @var bool
+     */
     private $writable = true;
 
     /**
@@ -38,13 +43,14 @@ class ConcurrentFile implements FileInterface
     /**
      * @param \Icicle\Concurrent\Worker\WorkerInterface $worker
      * @param int $size
-     * @param int $position
+     * @param bool $append
      */
-    public function __construct(WorkerInterface $worker, $size, $position = 0)
+    public function __construct(WorkerInterface $worker, $size, $append = false)
     {
         $this->worker = $worker;
         $this->size = $size;
-        $this->position = $position;
+        $this->append = $append;
+        $this->position = $append ? $size : 0;
 
         $this->queue = new \SplQueue();
     }
@@ -181,9 +187,14 @@ class ConcurrentFile implements FileInterface
 
         try {
             $written = (yield $promise);
-            $this->position += $written;
-            if ($this->position > $this->size) {
-                $this->size = $this->position;
+
+            if ($this->append) {
+                $this->size += $written;
+            } else {
+                $this->position += $written;
+                if ($this->position > $this->size) {
+                    $this->size = $this->position;
+                }
             }
         } catch (TaskException $exception) {
             $this->close();
@@ -260,7 +271,7 @@ class ConcurrentFile implements FileInterface
             throw new FileException('Seeking in the file failed.', 0, $exception);
         }
 
-        $this->size = $size;
+        $this->size = (int) $size;
 
         if ($this->position > $size) {
             $this->position = $size;
