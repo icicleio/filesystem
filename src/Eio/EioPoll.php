@@ -46,7 +46,7 @@ class EioPoll
                 \eio_poll();
             }
 
-            if (\eio_nreqs()) {
+            if (0 < $this->requests) {
                 $this->poll->listen();
             }
         });

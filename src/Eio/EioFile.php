@@ -4,6 +4,8 @@ namespace Icicle\File\Eio;
 use Icicle\File\Exception\FileException;
 use Icicle\File\FileInterface;
 use Icicle\Promise\Promise;
+use Icicle\Stream\Exception\InvalidArgumentError;
+use Icicle\Stream\Exception\OutOfBoundsException;
 use Icicle\Stream\Exception\UnreadableException;
 use Icicle\Stream\Exception\UnseekableException;
 use Icicle\Stream\Exception\UnwritableException;
@@ -262,6 +264,8 @@ class EioFile implements FileInterface
                             sprintf('Writing to the file failed: %s.', \eio_get_last_error($req))
                         ));
                         $this->close();
+                    } elseif ($this->queue->isEmpty()) {
+                        $reject(new FileException('No pending write, the file may have been closed.'));
                     } else {
                         $this->queue->shift();
 
@@ -310,19 +314,28 @@ class EioFile implements FileInterface
 
         switch ($whence) {
             case \SEEK_SET:
-                $this->position = $offset;
                 break;
 
             case \SEEK_CUR:
-                $this->position += $offset;
+                $offset = $this->position + $offset;
                 break;
 
             case \SEEK_END:
-                $this->position = $this->size + $offset;
+                $offset = $this->size + $offset;
                 break;
 
             default:
-                throw new FileException('Invalid whence value. Use SEEK_SET, SEEK_CUR, or SEEK_END.');
+                throw new InvalidArgumentError('Invalid whence value. Use SEEK_SET, SEEK_CUR, or SEEK_END.');
+        }
+
+        if (0 > $offset) {
+            throw new OutOfBoundsException(sprintf('Invalid offset: %s.', $offset));
+        }
+
+        $this->position = $offset;
+
+        if ($this->position > $this->size) {
+            $this->size = $this->position;
         }
 
         yield $this->position;
@@ -383,6 +396,7 @@ class EioFile implements FileInterface
 
         try {
             yield $promise;
+
             $this->size = $size;
             if ($this->position > $size) {
                 $this->position = $size;

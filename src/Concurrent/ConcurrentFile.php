@@ -6,6 +6,8 @@ use Icicle\Concurrent\Worker\WorkerInterface;
 use Icicle\Coroutine\Coroutine;
 use Icicle\File\Exception\FileException;
 use Icicle\File\FileInterface;
+use Icicle\Stream\Exception\InvalidArgumentError;
+use Icicle\Stream\Exception\OutOfBoundsException;
 use Icicle\Stream\Exception\UnreadableException;
 use Icicle\Stream\Exception\UnseekableException;
 use Icicle\Stream\Exception\UnwritableException;
@@ -19,6 +21,11 @@ class ConcurrentFile implements FileInterface
      * @var \Icicle\Concurrent\Worker\WorkerInterface
      */
     private $worker;
+
+    /**
+     * @var bool
+     */
+    private $open = true;
 
     /**
      * @var int
@@ -60,7 +67,7 @@ class ConcurrentFile implements FileInterface
      */
     public function isOpen()
     {
-        return $this->worker->isRunning();
+        return $this->open;
     }
 
     /**
@@ -80,6 +87,7 @@ class ConcurrentFile implements FileInterface
             $promise->cancel(new FileException('The file was closed.'));
         }
 
+        $this->open = false;
         $this->writable = false;
     }
 
@@ -219,13 +227,39 @@ class ConcurrentFile implements FileInterface
      */
     public function seek($offset, $whence = SEEK_SET, $timeout = 0)
     {
-        if (!$this->isReadable() && !$this->isWritable()) {
+        if (!$this->isOpen()) {
             throw new UnseekableException('The file is no longer seekable.');
+        }
+
+        switch ($whence) {
+            case \SEEK_SET:
+                break;
+
+            case \SEEK_CUR:
+                $offset = $this->position + $offset;
+                break;
+
+            case \SEEK_END:
+                $offset = $this->size + $offset;
+                break;
+
+            default:
+                throw new InvalidArgumentError('Invalid whence value. Use SEEK_SET, SEEK_CUR, or SEEK_END.');
+        }
+
+        if (0 > $offset) {
+            throw new OutOfBoundsException(sprintf('Invalid offset: %s.', $offset));
+        }
+
+        $this->position = $offset;
+
+        if ($this->position > $this->size) {
+            $this->size = $this->position;
         }
 
         try {
             $this->position = (yield $this->worker->enqueue(
-                new Internal\FileTask('fseek', [(int) $offset, (int) $whence])
+                new Internal\FileTask('fseek', [(int) $offset, \SEEK_SET])
             ));
         } catch (TaskException $exception) {
             $this->close();
@@ -277,7 +311,7 @@ class ConcurrentFile implements FileInterface
             $this->position = $size;
         }
 
-        yield $this->position;
+        yield true;
     }
 
     /**
