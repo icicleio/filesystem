@@ -434,5 +434,98 @@ abstract class AbstractFileTest extends TestCase
         $this->assertSame(self::WRITE_STRING . "\0", $this->getFileContents(self::PATH));
     }
 
+    /**
+     * @depends testTruncate
+     * @expectedException \Icicle\File\Exception\FileException
+     */
+    public function testTruncateReadOnly()
+    {
+        $this->createFileWith(self::PATH, self::WRITE_STRING);
 
+        $file = $this->openFile(self::PATH, 'r');
+
+        $coroutine = new Coroutine($file->truncate(0));
+
+        $result = $coroutine->wait();
+    }
+
+    public function testStat()
+    {
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $coroutine = new Coroutine($file->stat());
+
+        $stat = $coroutine->wait();
+
+        $this->assertInternalType('array', $stat);
+
+        $keys = [
+            0  => 'dev',
+            1  => 'ino',
+            2  => 'mode',
+            3  => 'nlink',
+            4  => 'uid',
+            5  => 'gid',
+            6  => 'rdev',
+            7  => 'size',
+            8  => 'atime',
+            9  => 'mtime',
+            10 => 'ctime',
+            11 => 'blksize',
+            12 => 'blocks',
+        ];
+
+        foreach ($keys as $key) {
+            $this->assertArrayHasKey($key, $stat);
+        }
+
+        foreach (range(0, 12) as $key) {
+            $this->assertArrayHasKey($key, $stat);
+        }
+    }
+
+    public function testChmod()
+    {
+        $mode = 0777;
+
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $coroutine = new Coroutine($file->chmod($mode));
+
+        $this->assertTrue($coroutine->wait());
+
+        $stat = stat(self::PATH);
+
+        $this->assertSame($mode, $stat['mode'] & 0777);
+    }
+
+    public function testChown()
+    {
+        $uid = getmyuid();
+
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $coroutine = new Coroutine($file->chown($uid));
+
+        $this->assertTrue($coroutine->wait());
+
+        $stat = stat(self::PATH);
+
+        $this->assertSame($uid, $stat['uid']);
+    }
+
+    public function testChgrp()
+    {
+        $gid = getmygid();
+
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $coroutine = new Coroutine($file->chgrp($gid));
+
+        $this->assertTrue($coroutine->wait());
+
+        $stat = stat(self::PATH);
+
+        $this->assertSame($gid, $stat['gid']);
+    }
 }

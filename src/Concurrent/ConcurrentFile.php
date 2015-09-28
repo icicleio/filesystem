@@ -23,6 +23,11 @@ class ConcurrentFile implements FileInterface
     private $worker;
 
     /**
+     * @var string
+     */
+    private $path;
+
+    /**
      * @var bool
      */
     private $open = true;
@@ -52,14 +57,23 @@ class ConcurrentFile implements FileInterface
      * @param int $size
      * @param bool $append
      */
-    public function __construct(WorkerInterface $worker, $size, $append = false)
+    public function __construct(WorkerInterface $worker, $path, $size, $append = false)
     {
         $this->worker = $worker;
+        $this->path = $path;
         $this->size = $size;
         $this->append = $append;
         $this->position = $append ? $size : 0;
 
         $this->queue = new \SplQueue();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getPath()
+    {
+        return $this->path;
     }
 
     /**

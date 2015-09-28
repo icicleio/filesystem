@@ -9,6 +9,13 @@ interface FileInterface extends DuplexStreamInterface, SeekableStreamInterface
     const CHUNK_SIZE = 8192;
 
     /**
+     * Returns the path used to open the file.
+     *
+     * @return string
+     */
+    public function getPath();
+
+    /**
      * @return bool
      */
     public function eof();

@@ -26,6 +26,11 @@ class EioFile implements FileInterface
     private $handle;
 
     /**
+     * @var string
+     */
+    private $path;
+
+    /**
      * @var int
      */
     private $size = 0;
@@ -53,13 +58,15 @@ class EioFile implements FileInterface
     /**
      * @param \Icicle\File\Eio\EioPoll $poll
      * @param int $handle
+     * @param string $path
      * @param int $size
      * @param bool $append
      */
-    public function __construct(EioPoll $poll, $handle, $size, $append = false)
+    public function __construct(EioPoll $poll, $handle, $path, $size, $append = false)
     {
         $this->poll = $poll;
         $this->handle = $handle;
+        $this->path = $path;
         $this->size = $size;
         $this->append = $append;
         $this->position = $append ? $size : 0;
@@ -70,6 +77,14 @@ class EioFile implements FileInterface
     public function __destruct()
     {
         $this->close();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getPath()
+    {
+        return $this->path;
     }
 
     /**
@@ -434,10 +449,17 @@ class EioFile implements FileInterface
         $this->poll->listen();
 
         try {
-            yield $promise;
+            $stat = (yield $promise);
         } finally {
             $this->poll->done();
         }
+
+        $numeric = [];
+        foreach (EioDriver::getStatKeys() as $key => $name) {
+            $numeric[$key] = $stat[$name];
+        }
+
+        yield array_merge($numeric, $stat);
     }
 
     /**
@@ -469,8 +491,8 @@ class EioFile implements FileInterface
     private function chowngrp($uid, $gid)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($uid, $gid) {
-            $resource = @\eio_fchown(
-                $this->handle,
+            $resource = @\eio_chown(
+                $this->path,
                 $uid,
                 $gid,
                 null,
@@ -509,7 +531,7 @@ class EioFile implements FileInterface
     public function chmod($mode)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($mode) {
-            $resource = \eio_fchmod(
+            $resource = @\eio_fchmod(
                 $this->handle,
                 $mode,
                 null,

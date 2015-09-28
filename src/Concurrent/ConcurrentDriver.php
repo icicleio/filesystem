@@ -52,7 +52,7 @@ class ConcurrentDriver implements DriverInterface
             throw new FileException('Opening the file failed.', 0, $exception);
         }
 
-        yield new ConcurrentFile($worker, $size, $append);
+        yield new ConcurrentFile($worker, $path, $size, $append);
     }
 
     /**

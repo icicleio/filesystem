@@ -19,11 +19,19 @@ Coroutine\create(function () {
         var_dump(yield $file->seek(0));
 
         var_dump(yield $file->read());
+
+        //var_dump(yield $file->chown($path, 500));
     } finally {
         $file->close();
     }
 
     var_dump(yield File\isFile($path));
+
+    echo "chmod: ";
+    var_dump(yield File\chmod($path, 0777));
+
+    echo "chown: ";
+    var_dump(yield File\chown($path, 500));
 
     var_dump(yield File\isDir($path));
 

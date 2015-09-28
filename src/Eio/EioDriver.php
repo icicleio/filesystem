@@ -153,7 +153,7 @@ class EioDriver implements DriverInterface
             }
         }
 
-        yield new EioFile($this->poll, $handle, $size, (bool) ($flags & \EIO_O_APPEND));
+        yield new EioFile($this->poll, $handle, $path, $size, (bool) ($flags & \EIO_O_APPEND));
     }
 
     /**
@@ -258,7 +258,7 @@ class EioDriver implements DriverInterface
         }
 
         $numeric = [];
-        foreach (self::$statKeys as $key => $name) {
+        foreach (self::getStatKeys() as $key => $name) {
             $numeric[$key] = $stat[$name];
         }
 
@@ -510,7 +510,7 @@ class EioDriver implements DriverInterface
     public function chmod($path, $mode)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode) {
-            $resource = \eio_fchmod(
+            $resource = \eio_chmod(
                 $path,
                 $mode,
                 null,
@@ -541,5 +541,13 @@ class EioDriver implements DriverInterface
         } finally {
             $this->poll->done();
         }
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getStatKeys()
+    {
+        return self::$statKeys;
     }
 }
