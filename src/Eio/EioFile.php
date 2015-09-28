@@ -491,8 +491,8 @@ class EioFile implements FileInterface
     private function chowngrp($uid, $gid)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($uid, $gid) {
-            $resource = @\eio_chown(
-                $this->path,
+            $resource = @\eio_fchown(
+                $this->handle,
                 $uid,
                 $gid,
                 null,

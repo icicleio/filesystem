@@ -25,7 +25,7 @@
     },
     "minimum-stability": "dev",
     "suggest": {
-        "ext-eio": "Extension providing better performance for asynchronous file access."
+        "ext-eio": "Extension providing better performance for asynchronous file access. v1.2.6+ required."
     },
     "autoload": {
         "psr-4": {
