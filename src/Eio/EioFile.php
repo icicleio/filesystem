@@ -9,12 +9,9 @@ use Icicle\Stream\Exception\OutOfBoundsException;
 use Icicle\Stream\Exception\UnreadableException;
 use Icicle\Stream\Exception\UnseekableException;
 use Icicle\Stream\Exception\UnwritableException;
-use Icicle\Stream\PipeTrait;
 
 class EioFile implements FileInterface
 {
-    use PipeTrait;
-
     /**
      * @var \Icicle\File\Eio\EioPoll
      */

@@ -17,7 +17,7 @@
     ],
     "require": {
         "icicleio/icicle": "^0.8.2",
-        "icicleio/stream": "^0.3",
+        "icicleio/stream": "^0.4",
         "icicleio/concurrent": "dev-master"
     },
     "require-dev": {
