@@ -6,11 +6,11 @@ use Icicle\File\Eio\EioDriver;
 
 if (!\function_exists(__NAMESPACE__ . '\driver')) {
     /**
-     * @param \Icicle\File\DriverInterface|null $driver
+     * @param \Icicle\File\Driver|null $driver
      *
-     * @return \Icicle\File\DriverInterface
+     * @return \Icicle\File\Driver
      */
-    function driver(DriverInterface $driver = null)
+    function driver(Driver $driver = null)
     {
         static $instance;
 
@@ -24,11 +24,11 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     }
 
     /**
-     * @return \Icicle\File\DriverInterface
+     * @return \Icicle\File\Driver
      */
     function create()
     {
-        if (\extension_loaded('eio')) {
+        if (EioDriver::enabled()) {
             return new EioDriver();
         }
 
@@ -46,7 +46,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      */
     function get($path)
     {
-        /** @var \Icicle\File\FileInterface $file */
+        /** @var \Icicle\File\File $file */
         $file = (yield driver()->open($path, 'r'));
 
         $data = '';
@@ -72,7 +72,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      */
     function put($path, $data)
     {
-        /** @var \Icicle\File\FileInterface $file */
+        /** @var \Icicle\File\File $file */
         $file = (yield driver()->open($path, 'w'));
 
         $written = (yield $file->write($data));
@@ -92,7 +92,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @return \Generator
      *
-     * @resolve \Icicle\File\FileInterface
+     * @resolve \Icicle\File\File
      *
      * @throws \Icicle\File\Exception\FileException If the file is not found or cannot be opened.
      */

@@ -1,12 +1,12 @@
 <?php
 namespace Icicle\File\Eio;
 
-use Icicle\File\DriverInterface;
+use Icicle\Awaitable\Promise;
+use Icicle\File\Driver;
 use Icicle\File\Exception\FileException;
 use Icicle\Loop;
-use Icicle\Promise\Promise;
 
-class EioDriver implements DriverInterface
+class EioDriver implements Driver
 {
     /**
      * @var string[]
@@ -31,6 +31,14 @@ class EioDriver implements DriverInterface
      * @var \Icicle\File\Eio\EioPoll
      */
     private $poll;
+
+    /**
+     * @return bool
+     */
+    public static function enabled()
+    {
+        return extension_loaded('eio');
+    }
 
     public function __construct()
     {
@@ -92,7 +100,7 @@ class EioDriver implements DriverInterface
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode, $flags) {
             $chmod = ($flags & \EIO_O_CREAT) ? 0644 : 0;
 
-            $resource = \eio_open($path, $flags, $chmod, null, function ($data, $handle, $req) use (
+            $resource = @\eio_open($path, $flags, $chmod, null, function ($data, $handle, $req) use (
                 $resolve, $reject
             ) {
                 if (-1 === $handle) {
@@ -125,7 +133,7 @@ class EioDriver implements DriverInterface
             $size = 0;
         } else {
             $promise = new Promise(function (callable $resolve, callable $reject) use ($handle) {
-                $resource = \eio_fstat($handle, null, function ($data, $result, $req) use ($resolve, $reject) {
+                $resource = @\eio_fstat($handle, null, function ($data, $result, $req) use ($resolve, $reject) {
                     if (-1 === $result) {
                         $reject(new FileException(
                             sprintf('Finding file size failed: %s.', \eio_get_last_error($req))
@@ -162,7 +170,7 @@ class EioDriver implements DriverInterface
     public function unlink($path)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = \eio_unlink($path, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_unlink($path, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Unlinking the file failed: %s.', \eio_get_last_error($req))
@@ -196,7 +204,7 @@ class EioDriver implements DriverInterface
     public function rename($oldPath, $newPath)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($oldPath, $newPath) {
-            $resource = \eio_rename($oldPath, $newPath, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_rename($oldPath, $newPath, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Renaming the file failed: %s.', \eio_get_last_error($req))
@@ -230,7 +238,7 @@ class EioDriver implements DriverInterface
     public function stat($path)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = \eio_stat($path, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_stat($path, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Could not stat file: %s.', \eio_get_last_error($req))
@@ -297,7 +305,7 @@ class EioDriver implements DriverInterface
     public function symlink($source, $target)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($source, $target) {
-            $resource = \eio_symlink($source, $target, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_symlink($source, $target, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Could not create symlink: %s.', \eio_get_last_error($req))
@@ -343,7 +351,7 @@ class EioDriver implements DriverInterface
     public function mkdir($path, $mode = 0755)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode) {
-            $resource = \eio_mkdir($path, $mode, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_mkdir($path, $mode, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Could not create directory: %s.', \eio_get_last_error($req))
@@ -377,7 +385,7 @@ class EioDriver implements DriverInterface
     public function readdir($path)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = \eio_readdir($path, 0, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_readdir($path, 0, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Could not create directory: %s.', \eio_get_last_error($req))
@@ -413,7 +421,7 @@ class EioDriver implements DriverInterface
     public function rmdir($path)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = \eio_rmdir($path, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_rmdir($path, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Could not remove directory: %s.', \eio_get_last_error($req))
@@ -510,7 +518,7 @@ class EioDriver implements DriverInterface
     public function chmod($path, $mode)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode) {
-            $resource = \eio_chmod(
+            $resource = @\eio_chmod(
                 $path,
                 $mode,
                 null,

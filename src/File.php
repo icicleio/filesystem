@@ -1,10 +1,10 @@
 <?php
 namespace Icicle\File;
 
-use Icicle\Stream\DuplexStreamInterface;
-use Icicle\Stream\SeekableStreamInterface;
+use Icicle\Stream\DuplexStream;
+use Icicle\Stream\SeekableStream;
 
-interface FileInterface extends DuplexStreamInterface, SeekableStreamInterface
+interface File extends DuplexStream, SeekableStream
 {
     const CHUNK_SIZE = 8192;
 

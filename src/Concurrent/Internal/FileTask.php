@@ -2,11 +2,11 @@
 namespace Icicle\File\Concurrent\Internal;
 
 use Icicle\Concurrent\Worker\Environment;
-use Icicle\Concurrent\Worker\TaskInterface;
+use Icicle\Concurrent\Worker\Task;
 use Icicle\File\Exception\FileException;
 use Icicle\File\Exception\InvalidArgumentError;
 
-class FileTask implements TaskInterface
+class FileTask implements Task
 {
     /**
      * @var string

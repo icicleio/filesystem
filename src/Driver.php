@@ -1,7 +1,7 @@
 <?php
 namespace Icicle\File;
 
-interface DriverInterface
+interface Driver
 {
     /**
      * Opens the file at the file path using the given mode. Modes are identical to those of fopen().

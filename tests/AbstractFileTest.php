@@ -13,7 +13,7 @@ abstract class AbstractFileTest extends TestCase
      * @param string $path
      * @param string $mode
      *
-     * @return \Icicle\File\FileInterface
+     * @return \Icicle\File\File
      */
     abstract protected function openFile($path, $mode = 'r+');
 
@@ -186,7 +186,7 @@ abstract class AbstractFileTest extends TestCase
 
     /**
      * @depends testWrite
-     * @expectedException \Icicle\Promise\Exception\CancelledException
+     * @expectedException \Icicle\Awaitable\Exception\CancelledException
      */
     public function testWriteThenCancel()
     {
@@ -252,7 +252,7 @@ abstract class AbstractFileTest extends TestCase
 
     /**
      * @depends testSeek
-     * @expectedException \Icicle\Stream\Exception\InvalidArgumentError
+     * @expectedException \Icicle\Exception\InvalidArgumentError
      */
     public function testSeekInvalidWhence()
     {

@@ -2,20 +2,20 @@
 namespace Icicle\File\Concurrent;
 
 use Icicle\Concurrent\Exception\TaskException;
-use Icicle\Concurrent\Worker\WorkerInterface;
+use Icicle\Concurrent\Worker\Worker;
 use Icicle\Coroutine\Coroutine;
+use Icicle\Exception\InvalidArgumentError;
 use Icicle\File\Exception\FileException;
-use Icicle\File\FileInterface;
-use Icicle\Stream\Exception\InvalidArgumentError;
+use Icicle\File\File;
 use Icicle\Stream\Exception\OutOfBoundsException;
 use Icicle\Stream\Exception\UnreadableException;
 use Icicle\Stream\Exception\UnseekableException;
 use Icicle\Stream\Exception\UnwritableException;
 
-class ConcurrentFile implements FileInterface
+class ConcurrentFile implements File
 {
     /**
-     * @var \Icicle\Concurrent\Worker\WorkerInterface
+     * @var \Icicle\Concurrent\Worker\Worker
      */
     private $worker;
 
@@ -35,6 +35,11 @@ class ConcurrentFile implements FileInterface
     private $position;
 
     /**
+     * @var int
+     */
+    private $size;
+
+    /**
      * @var bool
      */
     private $append = false;
@@ -50,11 +55,11 @@ class ConcurrentFile implements FileInterface
     private $queue;
 
     /**
-     * @param \Icicle\Concurrent\Worker\WorkerInterface $worker
+     * @param \Icicle\Concurrent\Worker\Worker $worker
      * @param int $size
      * @param bool $append
      */
-    public function __construct(WorkerInterface $worker, $path, $size, $append = false)
+    public function __construct(Worker $worker, $path, $size, $append = false)
     {
         $this->worker = $worker;
         $this->path = $path;

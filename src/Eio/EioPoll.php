@@ -41,14 +41,10 @@ class EioPoll
 
     private function createPoll()
     {
-        return Loop\poll(\eio_get_event_stream(), function ($resource) {
+        return Loop\poll(\eio_get_event_stream(), function () {
             while (\eio_npending()) {
                 \eio_poll();
             }
-
-            if (0 < $this->requests) {
-                $this->poll->listen();
-            }
-        });
+        }, true);
     }
 }

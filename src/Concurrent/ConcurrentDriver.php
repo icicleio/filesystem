@@ -3,31 +3,31 @@ namespace Icicle\File\Concurrent;
 
 use Icicle\Concurrent\Exception\TaskException;
 use Icicle\Concurrent\Worker;
-use Icicle\Concurrent\Worker\PoolInterface;
+use Icicle\Concurrent\Worker\DefaultWorkerFactory;
+use Icicle\Concurrent\Worker\Pool;
 use Icicle\Concurrent\Worker\WorkerFactory;
-use Icicle\Concurrent\Worker\WorkerFactoryInterface;
-use Icicle\File\DriverInterface;
+use Icicle\File\Driver;
 use Icicle\File\Exception\FileException;
 
-class ConcurrentDriver implements DriverInterface
+class ConcurrentDriver implements Driver
 {
     /**
-     * @var \Icicle\Concurrent\Worker\WorkerFactoryInterface
+     * @var \Icicle\Concurrent\Worker\WorkerFactory
      */
     private $factory;
 
     /**
-     * @var \Icicle\Concurrent\Worker\PoolInterface
+     * @var \Icicle\Concurrent\Worker\Pool
      */
     private $pool;
 
     /**
-     * @param \Icicle\Concurrent\Worker\WorkerFactoryInterface|null $factory
-     * @param \Icicle\Concurrent\Worker\PoolInterface|null $pool
+     * @param \Icicle\Concurrent\Worker\WorkerFactory|null $factory
+     * @param \Icicle\Concurrent\Worker\Pool|null $pool
      */
-    public function __construct(WorkerFactoryInterface $factory = null, PoolInterface $pool = null)
+    public function __construct(WorkerFactory $factory = null, Pool $pool = null)
     {
-        $this->factory = $factory ?: new WorkerFactory();
+        $this->factory = $factory ?: new DefaultWorkerFactory();
         $this->pool = $pool ?: Worker\pool();
 
         if (!$this->pool->isRunning()) {

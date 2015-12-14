@@ -1,16 +1,16 @@
 <?php
 namespace Icicle\File\Eio;
 
+use Icicle\Awaitable\Promise;
+use Icicle\Exception\InvalidArgumentError;
 use Icicle\File\Exception\FileException;
-use Icicle\File\FileInterface;
-use Icicle\Promise\Promise;
-use Icicle\Stream\Exception\InvalidArgumentError;
+use Icicle\File\File;
 use Icicle\Stream\Exception\OutOfBoundsException;
 use Icicle\Stream\Exception\UnreadableException;
 use Icicle\Stream\Exception\UnseekableException;
 use Icicle\Stream\Exception\UnwritableException;
 
-class EioFile implements FileInterface
+class EioFile implements File
 {
     /**
      * @var \Icicle\File\Eio\EioPoll
@@ -136,7 +136,7 @@ class EioFile implements FileInterface
         $length = $length > $remaining ? $remaining : $length;
 
         $promise = new Promise(function (callable $resolve, callable $reject) use ($length) {
-            $resource = \eio_read(
+            $resource = @\eio_read(
                 $this->handle,
                 $length,
                 $this->position,
@@ -209,9 +209,12 @@ class EioFile implements FileInterface
      * @coroutine
      *
      * @param string $data
+     * @param float|int $timeout
      * @param bool $end
      *
      * @return \Generator
+     *
+     * @resolve int Number of bytes written to the file.
      *
      * @throws \Icicle\Stream\Exception\UnwritableException
      */
@@ -257,14 +260,14 @@ class EioFile implements FileInterface
     /**
      * @param string $data
      *
-     * @return \Icicle\Promise\PromiseInterface
+     * @return \Icicle\Awaitable\Promise
      */
     private function push($data)
     {
         return new Promise(function (callable $resolve, callable $reject) use ($data) {
             $length = strlen($data);
 
-            $resource = \eio_write(
+            $resource = @\eio_write(
                 $this->handle,
                 $data,
                 $length,
@@ -298,10 +301,6 @@ class EioFile implements FileInterface
             if (false === $resource) {
                 throw new FileException('Could not initialize file write.');
             }
-
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
         });
     }
 
@@ -380,7 +379,7 @@ class EioFile implements FileInterface
         }
 
         $promise = new Promise(function (callable $resolve, callable $reject) use ($size) {
-            $resource = \eio_ftruncate(
+            $resource = @\eio_ftruncate(
                 $this->handle,
                 $size,
                 null,
@@ -424,7 +423,7 @@ class EioFile implements FileInterface
     public function stat()
     {
         $promise = new Promise(function (callable $resolve, callable $reject) {
-            $resource = \eio_fstat($this->handle, null, function ($data, $result, $req) use ($resolve, $reject) {
+            $resource = @\eio_fstat($this->handle, null, function ($data, $result, $req) use ($resolve, $reject) {
                 if (-1 === $result) {
                     $reject(new FileException(
                         sprintf('Getting file status failed: %s.', \eio_get_last_error($req))
@@ -573,7 +572,7 @@ class EioFile implements FileInterface
     public function copy($path)
     {
         $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = \eio_open(
+            $resource = @\eio_open(
                 $path,
                 \EIO_O_WRONLY | \EIO_O_CREAT | \EIO_O_TRUNC,
                 0644,
@@ -607,7 +606,7 @@ class EioFile implements FileInterface
         }
 
         $promise = new Promise(function (callable $resolve, callable $reject) use ($handle) {
-            $resource = \eio_sendfile(
+            $resource = @\eio_sendfile(
                 $handle,
                 $this->handle,
                 0,
