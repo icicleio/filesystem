@@ -1,7 +1,7 @@
 <?php
 namespace Icicle\File\Eio;
 
-use Icicle\Awaitable\Promise;
+use Icicle\Awaitable\Delayed;
 use Icicle\File\Driver;
 use Icicle\File\Exception\FileException;
 use Icicle\Loop;
@@ -37,13 +37,13 @@ class EioDriver implements Driver
      */
     public static function enabled()
     {
-        return extension_loaded('eio');
+        return \extension_loaded('eio');
     }
 
     public function __construct()
     {
         // @codeCoverageIgnoreStart
-        if (!\extension_loaded('eio')) {
+        if (!self::enabled()) {
             throw new FileException('Requires the eio extension.');
         } // @codeCoverageIgnoreEnd
 
@@ -96,35 +96,27 @@ class EioDriver implements Driver
     public function open($path, $mode)
     {
         $flags = $this->makeFlags($mode);
+        $chmod = ($flags & \EIO_O_CREAT) ? 0644 : 0;
 
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode, $flags) {
-            $chmod = ($flags & \EIO_O_CREAT) ? 0644 : 0;
-
-            $resource = @\eio_open($path, $flags, $chmod, null, function ($data, $handle, $req) use (
-                $resolve, $reject
-            ) {
-                if (-1 === $handle) {
-                    $reject(new FileException(
-                        sprintf('Opening the file failed: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $resolve($handle);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not open file.');
+        $delayed = new Delayed();
+        $resource = @\eio_open($path, $flags, $chmod, null, function (Delayed $delayed, $handle, $req) {
+            if (-1 === $handle) {
+                $delayed->reject(new FileException(
+                    sprintf('Opening the file failed: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve($handle);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not open file.');
+        }
 
         $this->poll->listen();
 
         try {
-            $handle = (yield $promise);
+            $handle = (yield $delayed);
         } finally {
             $this->poll->done();
         }
@@ -132,30 +124,25 @@ class EioDriver implements Driver
         if ($flags & \EIO_O_TRUNC) { // File truncated.
             $size = 0;
         } else {
-            $promise = new Promise(function (callable $resolve, callable $reject) use ($handle) {
-                $resource = @\eio_fstat($handle, null, function ($data, $result, $req) use ($resolve, $reject) {
-                    if (-1 === $result) {
-                        $reject(new FileException(
-                            sprintf('Finding file size failed: %s.', \eio_get_last_error($req))
-                        ));
-                    } else {
-                        $resolve($result['size']);
-                    }
-                });
-
-                if (false === $resource) {
-                    throw new FileException('Could not get file size.');
+            $delayed = new Delayed();
+            $resource = @\eio_fstat($handle, null, function (Delayed $delayed, $result, $req) {
+                if (-1 === $result) {
+                    $delayed->reject(new FileException(
+                        sprintf('Finding file size failed: %s.', \eio_get_last_error($req))
+                    ));
+                } else {
+                    $delayed->resolve($result['size']);
                 }
+            }, $delayed);
 
-                return function () use ($resource) {
-                    \eio_cancel($resource);
-                };
-            });
+            if (false === $resource) {
+                throw new FileException('Could not get file size.');
+            }
 
             $this->poll->listen();
 
             try {
-                $size = (yield $promise);
+                $size = (yield $delayed);
             } finally {
                 $this->poll->done();
             }
@@ -169,30 +156,25 @@ class EioDriver implements Driver
      */
     public function unlink($path)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = @\eio_unlink($path, null, function ($data, $result, $req) use ($resolve, $reject) {
-                if (-1 === $result) {
-                    $reject(new FileException(
-                        sprintf('Unlinking the file failed: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $resolve(true);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not unlink file.');
+        $delayed = new Delayed();
+        $resource = @\eio_unlink($path, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Unlinking the file failed: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not unlink file.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -203,30 +185,25 @@ class EioDriver implements Driver
      */
     public function rename($oldPath, $newPath)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($oldPath, $newPath) {
-            $resource = @\eio_rename($oldPath, $newPath, null, function ($data, $result, $req) use ($resolve, $reject) {
-                if (-1 === $result) {
-                    $reject(new FileException(
-                        sprintf('Renaming the file failed: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $resolve(true);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not rename file.');
+        $delayed = new Delayed();
+        $resource = @\eio_rename($oldPath, $newPath, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Renaming the file failed: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not rename file.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -237,30 +214,25 @@ class EioDriver implements Driver
      */
     public function stat($path)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = @\eio_stat($path, null, function ($data, $result, $req) use ($resolve, $reject) {
-                if (-1 === $result) {
-                    $reject(new FileException(
-                        sprintf('Could not stat file: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $resolve($result);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not stat file.');
+        $delayed = new Delayed();
+        $resource = @\eio_stat($path, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Could not stat file: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve($result);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not stat file.');
+        }
 
         $this->poll->listen();
 
         try {
-            $stat = (yield $promise);
+            $stat = (yield $delayed);
         } finally {
             $this->poll->done();
         }
@@ -304,30 +276,25 @@ class EioDriver implements Driver
      */
     public function symlink($source, $target)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($source, $target) {
-            $resource = @\eio_symlink($source, $target, null, function ($data, $result, $req) use ($resolve, $reject) {
-                if (-1 === $result) {
-                    $reject(new FileException(
-                        sprintf('Could not create symlink: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $resolve(true);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not create symlink.');
+        $delayed = new Delayed();
+        $resource = @\eio_symlink($source, $target, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Could not create symlink: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not create symlink.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -350,30 +317,25 @@ class EioDriver implements Driver
      */
     public function mkdir($path, $mode = 0755)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode) {
-            $resource = @\eio_mkdir($path, $mode, null, function ($data, $result, $req) use ($resolve, $reject) {
-                if (-1 === $result) {
-                    $reject(new FileException(
-                        sprintf('Could not create directory: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $resolve(true);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not create directory.');
+        $delayed = new Delayed();
+        $resource = @\eio_mkdir($path, $mode, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Could not create directory: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not create directory.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -384,32 +346,27 @@ class EioDriver implements Driver
      */
     public function readdir($path)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = @\eio_readdir($path, 0, null, function ($data, $result, $req) use ($resolve, $reject) {
-                if (-1 === $result) {
-                    $reject(new FileException(
-                        sprintf('Could not create directory: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $result = $result['names'];
-                    sort($result, \SORT_STRING | \SORT_NATURAL | \SORT_FLAG_CASE);
-                    $resolve($result);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not create directory.');
+        $delayed = new Delayed();
+        $resource = @\eio_readdir($path, 0, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Could not read directory: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $result = $result['names'];
+                sort($result, \SORT_STRING | \SORT_NATURAL | \SORT_FLAG_CASE);
+                $delayed->resolve($result);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not read directory.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -420,30 +377,25 @@ class EioDriver implements Driver
      */
     public function rmdir($path)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path) {
-            $resource = @\eio_rmdir($path, null, function ($data, $result, $req) use ($resolve, $reject) {
-                if (-1 === $result) {
-                    $reject(new FileException(
-                        sprintf('Could not remove directory: %s.', \eio_get_last_error($req))
-                    ));
-                } else {
-                    $resolve(true);
-                }
-            });
-
-            if (false === $resource) {
-                throw new FileException('Could not remove directory.');
+        $delayed = new Delayed();
+        $resource = @\eio_rmdir($path, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Could not remove directory: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('Could not remove directory.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -477,36 +429,25 @@ class EioDriver implements Driver
      */
     private function chowngrp($path, $uid, $gid)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $uid, $gid) {
-            $resource = @\eio_chown(
-                $path,
-                $uid,
-                $gid,
-                null,
-                function ($data, $result, $req) use ($resolve, $reject) {
-                    if (-1 === $result) {
-                        $reject(new FileException(
-                            sprintf('Changing the owner or group failed: %s.', \eio_get_last_error($req))
-                        ));
-                    } else {
-                        $resolve(true);
-                    }
-                }
-            );
-
-            if (false === $resource) {
-                throw new FileException('File not found or invalid uid and/or gid.');
+        $delayed = new Delayed();
+        $resource = @\eio_chown($path, $uid, $gid, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Changing the owner or group failed: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('File not found or invalid uid and/or gid.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -517,35 +458,25 @@ class EioDriver implements Driver
      */
     public function chmod($path, $mode)
     {
-        $promise = new Promise(function (callable $resolve, callable $reject) use ($path, $mode) {
-            $resource = @\eio_chmod(
-                $path,
-                $mode,
-                null,
-                function ($data, $result, $req) use ($resolve, $reject) {
-                    if (-1 === $result) {
-                        $reject(new FileException(
-                            sprintf('Changing the owner failed: %s.', \eio_get_last_error($req))
-                        ));
-                    } else {
-                        $resolve(true);
-                    }
-                }
-            );
-
-            if (false === $resource) {
-                throw new FileException('File not found or invalid mode.');
+        $delayed = new Delayed();
+        $resource = @\eio_chmod($path, $mode, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Changing the owner failed: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
             }
+        }, $delayed);
 
-            return function () use ($resource) {
-                \eio_cancel($resource);
-            };
-        });
+        if (false === $resource) {
+            throw new FileException('File not found or invalid mode.');
+        }
 
         $this->poll->listen();
 
         try {
-            yield $promise;
+            yield $delayed;
         } finally {
             $this->poll->done();
         }

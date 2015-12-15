@@ -5,8 +5,14 @@ use Icicle\Loop;
 
 class EioPoll
 {
+    /**
+     * @var \Icicle\Loop\Watcher\Io
+     */
     private $poll;
 
+    /**
+     * @var int
+     */
     private $requests = 0;
 
     public function __construct()
