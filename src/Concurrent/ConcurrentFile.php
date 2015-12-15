@@ -21,6 +21,11 @@ class ConcurrentFile implements File
     private $worker;
 
     /**
+     * @var int
+     */
+    private $id;
+
+    /**
      * @var string
      */
     private $path;
@@ -57,12 +62,15 @@ class ConcurrentFile implements File
 
     /**
      * @param \Icicle\Concurrent\Worker\Worker $worker
+     * @param int $id
+     * @param string $path
      * @param int $size
      * @param bool $append
      */
-    public function __construct(Worker $worker, $path, $size, $append = false)
+    public function __construct(Worker $worker, $id, $path, $size, $append = false)
     {
         $this->worker = $worker;
+        $this->id = $id;
         $this->path = $path;
         $this->size = $size;
         $this->append = $append;
@@ -92,10 +100,12 @@ class ConcurrentFile implements File
      */
     public function close()
     {
-        if ($this->worker->isRunning()) {
-            $coroutine = new Coroutine($this->worker->shutdown());
-            $coroutine->done(null, function () {
-                $this->worker->kill();
+        if (null !== $this->worker && $this->worker->isRunning()) {
+            $worker = $this->worker;
+            $this->worker = null;
+            $coroutine = new Coroutine($worker->enqueue(new Internal\FileTask('fclose', [$this->id])));
+            $coroutine->done(null, function () use ($worker) {
+                $worker->kill();
             });
         }
 
@@ -136,7 +146,7 @@ class ConcurrentFile implements File
             $length = self::CHUNK_SIZE;
         }
 
-        $awaitable = new Coroutine($this->worker->enqueue(new Internal\FileTask('fread', [$length])));
+        $awaitable = new Coroutine($this->worker->enqueue(new Internal\FileTask('fread', [$this->id, $length])));
 
         if ($timeout) {
             $awaitable = $awaitable->timeout($timeout);
@@ -206,7 +216,7 @@ class ConcurrentFile implements File
             throw new UnwritableException('The file is no longer writable.');
         }
 
-        $task = new Internal\FileTask('fwrite', [(string) $data]);
+        $task = new Internal\FileTask('fwrite', [$this->id, (string) $data]);
 
         if ($this->queue->isEmpty()) {
             $awaitable = new Coroutine($this->worker->enqueue($task));
@@ -294,7 +304,7 @@ class ConcurrentFile implements File
 
         try {
             $this->position = (yield $this->worker->enqueue(
-                new Internal\FileTask('fseek', [$offset, \SEEK_SET])
+                new Internal\FileTask('fseek', [$this->id, $offset, \SEEK_SET])
             ));
         } catch (TaskException $exception) {
             $this->close();
@@ -340,7 +350,7 @@ class ConcurrentFile implements File
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask('ftruncate', [$size]));
+            yield $this->worker->enqueue(new Internal\FileTask('ftruncate', [$this->id, $size]));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Truncating the file failed.', $exception);
@@ -365,7 +375,7 @@ class ConcurrentFile implements File
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask('fstat'));
+            yield $this->worker->enqueue(new Internal\FileTask('fstat', [$this->id]));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Stating file failed.', $exception);
@@ -377,6 +387,10 @@ class ConcurrentFile implements File
      */
     public function copy($path)
     {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
         try {
             yield $this->worker->enqueue(new Internal\FileTask('copy', [$this->path, (string) $path]));
         } catch (TaskException $exception) {
@@ -389,7 +403,7 @@ class ConcurrentFile implements File
      */
     public function chown($uid)
     {
-        return $this->change('fchown', $uid);
+        return $this->change('chown', $uid);
     }
 
     /**
@@ -397,7 +411,7 @@ class ConcurrentFile implements File
      */
     public function chgrp($group)
     {
-        return $this->change('fchgrp', $group);
+        return $this->change('chgrp', $group);
     }
 
     /**
@@ -405,7 +419,7 @@ class ConcurrentFile implements File
      */
     public function chmod($mode)
     {
-        return $this->change('fchmod', $mode);
+        return $this->change('chmod', $mode);
     }
 
     /**
@@ -423,7 +437,7 @@ class ConcurrentFile implements File
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask($operation, [(int) $value]));
+            yield $this->worker->enqueue(new Internal\FileTask($operation, [$this->path, (int) $value]));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException(sprintf('%s failed.', $operation), $exception);

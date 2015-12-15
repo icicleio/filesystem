@@ -55,9 +55,36 @@ interface Driver
      *
      * @resolve bool
      *
-     * @throws \Icicle\File\Exception\FileException If unlinking fails.
+     * @throws \Icicle\File\Exception\FileException If creatingn the hard link fails.
+     */
+    public function link($source, $target);
+
+    /**
+     * @coroutine
+     *
+     * @param string $source
+     * @param string $target
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     *
+     * @throws \Icicle\File\Exception\FileException If creating the symlink fails.
      */
     public function symlink($source, $target);
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     *
+     * @throws \Icicle\File\Exception\FileException If reading the symlink fails.
+     */
+    public function readlink($path);
 
     /**
      * @coroutine
@@ -95,7 +122,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function mkdir($path, $mode = 0755);
+    public function mkDir($path, $mode = 0755);
 
     /**
      * @coroutine
@@ -106,7 +133,7 @@ interface Driver
      *
      * @resolve string[]
      */
-    public function lsdir($path);
+    public function lsDir($path);
 
     /**
      * @coroutine
@@ -117,7 +144,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function rmdir($path);
+    public function rmDir($path);
 
     /**
      * @coroutine
@@ -128,7 +155,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function isfile($path);
+    public function isFile($path);
 
     /**
      * @coroutine
@@ -139,7 +166,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function isdir($path);
+    public function isDir($path);
 
     /**
      * @coroutine

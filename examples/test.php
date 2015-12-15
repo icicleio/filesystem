@@ -8,41 +8,43 @@ use Icicle\Loop;
 
 Coroutine\create(function () {
     $path = __DIR__ . '/test.txt';
-    $dir = dirname(__DIR__);
+    $dir = __DIR__;
 
-    /** @var \Icicle\File\FileInterface $file */
+    /** @var \Icicle\File\File $file */
     $file = (yield File\open($path, 'w+'));
 
     try {
+        echo 'write: ';
         var_dump(yield $file->write('testing'));
 
+        echo 'seek: ';
         var_dump(yield $file->seek(0));
 
+        echo 'read: ';
         var_dump(yield $file->read());
-
-        //var_dump(yield $file->chown($path, 500));
     } finally {
         $file->close();
     }
 
+    echo 'isFile: ';
     var_dump(yield File\isFile($path));
 
-    echo "chmod: ";
-    var_dump(yield File\chmod($path, 0777));
-
-    echo "chown: ";
-    var_dump(yield File\chown($path, 500));
-
+    echo 'isDir: ';
     var_dump(yield File\isDir($path));
 
+    echo 'unlink: ';
     var_dump(yield File\unlink($path));
 
+    echo 'isFile (after unlink): ';
     var_dump(yield File\isFile($path));
 
+    echo 'mkDir: ';
     var_dump(yield File\mkDir($dir . '/new'));
 
-    var_dump(yield File\readDir($dir));
+    echo 'lsDir: ';
+    var_dump(yield File\lsDir($dir));
 
+    echo 'rmDir: ';
     var_dump(yield File\rmDir($dir . '/new'));
 
 })->done();

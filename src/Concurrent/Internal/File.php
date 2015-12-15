@@ -69,6 +69,14 @@ class File
     }
 
     /**
+     * @return int
+     */
+    public function getId()
+    {
+        return (int) $this->handle;
+    }
+
+    /**
      * @return bool
      */
     public function inAppendMode()
@@ -184,17 +192,7 @@ class File
      */
     public function size()
     {
-        $size = @filesize($this->path);
-
-        if (false === $size) {
-            $message = 'Could not get file size.';
-            if ($error = error_get_last()) {
-                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
-            }
-            throw new FileException($message);
-        }
-
-        return $size;
+        return $this->stat()['size'];
     }
 
     /**
@@ -228,66 +226,6 @@ class File
     {
         if (!ftruncate($this->handle, (int) $size)) {
             $message = 'Could not truncate file.';
-            if ($error = error_get_last()) {
-                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
-            }
-            throw new FileException($message);
-        }
-
-        return true;
-    }
-
-    /**
-     * @param int $owner
-     *
-     * @return bool
-     *
-     * @throws \Icicle\File\Exception\FileException
-     */
-    public function chown($owner)
-    {
-        if (!chown($this->path, (int) $owner)) {
-            $message = 'Could not change file owner.';
-            if ($error = error_get_last()) {
-                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
-            }
-            throw new FileException($message);
-        }
-
-        return true;
-    }
-
-    /**
-     * @param int $group
-     *
-     * @return bool
-     *
-     * @throws \Icicle\File\Exception\FileException
-     */
-    public function chgrp($group)
-    {
-        if (!chgrp($this->path, (int) $group)) {
-            $message = 'Could not change file group.';
-            if ($error = error_get_last()) {
-                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
-            }
-            throw new FileException($message);
-        }
-
-        return true;
-    }
-
-    /**
-     * @param int $mode
-     *
-     * @return bool
-     *
-     * @throws \Icicle\File\Exception\FileException
-     */
-    public function chmod($mode)
-    {
-        if (!chmod($this->path, (int) $mode)) {
-            $message = 'Could not change file mode.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
             }

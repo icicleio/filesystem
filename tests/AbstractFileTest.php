@@ -6,18 +6,7 @@ use Icicle\Loop;
 
 abstract class AbstractFileTest extends TestCase
 {
-    const PATH = '/tmp/test.txt';
     const WRITE_STRING = 'abcdefghijklmnopqrstuvwxz';
-
-    /**
-     * @var \Icicle\File\Concurrent\ConcurrentDriver
-     */
-    protected $driver;
-
-    /**
-     * @return \Icicle\File\Driver
-     */
-    abstract protected function createDriver();
 
     /**
      * @param string $path
@@ -26,41 +15,6 @@ abstract class AbstractFileTest extends TestCase
      * @return \Icicle\File\File
      */
     abstract protected function openFile($path, $mode = 'r+');
-
-    public function setUp()
-    {
-        $this->driver = $this->createDriver();
-    }
-
-    public function tearDown()
-    {
-        if (file_exists(self::PATH)) {
-            unlink(self::PATH);
-        }
-    }
-
-    public function getFileContents($path)
-    {
-        $handle = fopen($path, 'r');
-
-        $data = fread($handle, 8192);
-
-        fclose($handle);
-
-        return $data;
-    }
-
-    public function createFileWith($path, $data)
-    {
-        $handle = fopen($path, 'w');
-        $written = fwrite($handle, $data);
-
-        if (strlen($data) !== $written) {
-            $this->fail('Could not write data to file.');
-        }
-
-        fclose($handle);
-    }
 
     public function testIsOpen()
     {
@@ -474,23 +428,7 @@ abstract class AbstractFileTest extends TestCase
 
         $this->assertInternalType('array', $stat);
 
-        $keys = [
-            0  => 'dev',
-            1  => 'ino',
-            2  => 'mode',
-            3  => 'nlink',
-            4  => 'uid',
-            5  => 'gid',
-            6  => 'rdev',
-            7  => 'size',
-            8  => 'atime',
-            9  => 'mtime',
-            10 => 'ctime',
-            11 => 'blksize',
-            12 => 'blocks',
-        ];
-
-        foreach ($keys as $key) {
+        foreach (self::$keys as $key) {
             $this->assertArrayHasKey($key, $stat);
         }
 
@@ -523,7 +461,6 @@ abstract class AbstractFileTest extends TestCase
         $this->assertTrue($coroutine->wait());
 
         $stat = stat(self::PATH);
-
         $this->assertSame($mode, $stat['mode'] & 0777);
     }
 
@@ -538,7 +475,6 @@ abstract class AbstractFileTest extends TestCase
         $file->close();
 
         $coroutine = new Coroutine($file->chmod(0777));
-
         $coroutine->wait();
     }
 
@@ -553,7 +489,6 @@ abstract class AbstractFileTest extends TestCase
         $this->assertTrue($coroutine->wait());
 
         $stat = stat(self::PATH);
-
         $this->assertSame($uid, $stat['uid']);
     }
 
@@ -568,7 +503,6 @@ abstract class AbstractFileTest extends TestCase
         $file->close();
 
         $coroutine = new Coroutine($file->chown(getmypid()));
-
         $coroutine->wait();
     }
 
@@ -583,7 +517,6 @@ abstract class AbstractFileTest extends TestCase
         $this->assertTrue($coroutine->wait());
 
         $stat = stat(self::PATH);
-
         $this->assertSame($gid, $stat['gid']);
     }
 
@@ -598,7 +531,6 @@ abstract class AbstractFileTest extends TestCase
         $file->close();
 
         $coroutine = new Coroutine($file->chgrp(getmygid()));
-
         $coroutine->wait();
     }
 }

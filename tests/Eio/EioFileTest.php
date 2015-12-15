@@ -10,14 +10,19 @@ use Icicle\Tests\File\AbstractFileTest;
  */
 class EioFileTest extends AbstractFileTest
 {
-    public function createDriver()
+    /**
+     * @var \Icicle\File\Driver
+     */
+    protected static $driver;
+
+    public static function setUpBeforeClass()
     {
-        return new EioDriver();
+        self::$driver = new EioDriver();
     }
 
     protected function openFile($path, $mode = 'r+')
     {
-        $coroutine = new Coroutine($this->driver->open($path, $mode));
+        $coroutine = new Coroutine(self::$driver->open($path, $mode));
 
         return $coroutine->wait();
     }

@@ -44,19 +44,26 @@ class FileTask implements Task
     {
         if ('f' === $this->operation[0]) {
             if ('fopen' === $this->operation) {
-                if ($environment->exists('file')) {
-                    throw new FileException('A file handle has already been opened on the worker.');
+                if ($environment->exists($this->args[0])) {
+                    throw new FileException('The file handle has already been opened on the worker.');
                 }
                 $file = new File($this->args[0], $this->args[1]);
-                $environment->set('file', $file);
-                return [$file->size(), $file->inAppendMode()];
+                $id = $file->getId();
+                $environment->set('file' . $id, $file);
+                return [$id, $file->stat()['size'], $file->inAppendMode()];
             }
 
-            if (!$environment->exists('file')) {
-                throw new FileException('No file handle has been opened on the worker.');
+            if (!isset($this->args[0])) {
+                throw new FileException('No file ID provided.');
             }
 
-            if (!($file = $environment->get('file')) instanceof File) {
+            $id = 'file' . array_shift($this->args);
+
+            if (!$environment->exists($id)) {
+                throw new FileException('No file handle with the given ID has been opened on the worker.');
+            }
+
+            if (!($file = $environment->get($id)) instanceof File) {
                 throw new FileException('File storage found in inconsistent state.');
             }
 
@@ -66,10 +73,11 @@ class FileTask implements Task
                 case 'fseek':
                 case 'fstat':
                 case 'ftruncate':
-                case 'fchown':
-                case 'fchgrp':
-                case 'fchmod':
                     return call_user_func_array([$file, substr($this->operation, 1)], $this->args);
+
+                case 'fclose':
+                    $environment->delete($id);
+                    return true;
 
                 default:
                     throw new InvalidArgumentError('Invalid operation.');
@@ -81,7 +89,9 @@ class FileTask implements Task
             case 'unlink':
             case 'rename':
             case 'copy':
+            case 'link':
             case 'symlink':
+            case 'readlink':
             case 'isfile':
             case 'isdir':
             case 'mkdir':
@@ -190,7 +200,7 @@ class FileTask implements Task
      */
     private function copy($source, $target)
     {
-        if (!copy($source, $target)) {
+        if (!@copy($source, $target)) {
             $message = 'Could not copy file.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
@@ -198,7 +208,28 @@ class FileTask implements Task
             throw new FileException($message);
         }
 
-        return filesize($target);
+        return $this->stat($target)['size'];
+    }
+
+    /**
+     * @param string $source
+     * @param string $target
+     *
+     * @return bool
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function link($source, $target)
+    {
+        if (!@link($source, $target)) {
+            $message = 'Could not create link.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return true;
     }
 
     /**
@@ -211,7 +242,7 @@ class FileTask implements Task
      */
     private function symlink($source, $target)
     {
-        if (!symlink($source, $target)) {
+        if (!@symlink($source, $target)) {
             $message = 'Could not create symlink.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
@@ -220,6 +251,28 @@ class FileTask implements Task
         }
 
         return true;
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return string
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    private function readlink($path)
+    {
+        $result = @readlink($path);
+
+        if (false === $result) {
+            $message = 'Could not read symlink.';
+            if ($error = error_get_last()) {
+                $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
+            }
+            throw new FileException($message);
+        }
+
+        return $result;
     }
 
     /**
@@ -262,7 +315,7 @@ class FileTask implements Task
             throw new FileException($message);
         }
 
-        return array_diff($result, ['.', '..']);
+        return array_values(array_diff($result, ['.', '..']));
     }
 
     /**
@@ -295,7 +348,7 @@ class FileTask implements Task
      */
     private function chown($path, $owner)
     {
-        if (!chown($path, (int) $owner)) {
+        if (!@chown($path, (int) $owner)) {
             $message = 'Could not change file owner.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
@@ -316,7 +369,7 @@ class FileTask implements Task
      */
     private function chgrp($path, $group)
     {
-        if (!chgrp($path, (int) $group)) {
+        if (!@chgrp($path, (int) $group)) {
             $message = 'Could not change file group.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
@@ -337,7 +390,7 @@ class FileTask implements Task
      */
     private function chmod($path, $mode)
     {
-        if (!chmod($path, (int) $mode)) {
+        if (!@chmod($path, (int) $mode)) {
             $message = 'Could not change file mode.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);

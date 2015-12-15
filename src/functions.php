@@ -160,6 +160,39 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      *
+     * @throws \Icicle\File\Exception\FileException If creating the hard link fails.
+     */
+    function link($source, $target)
+    {
+        return driver()->link($source, $target);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param string $path
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     *
+     * @throws \Icicle\File\Exception\FileException If reading the symlink fails.
+     */
+    function readlink($path)
+    {
+        return driver()->readlink($path);
+    }
+
+    /**
+     * @coroutine
+     *
+     * @param string $source
+     * @param string $target
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     *
      * @throws \Icicle\File\Exception\FileException If creating the symlink fails.
      */
     function symlink($source, $target)
@@ -195,7 +228,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If determining if the path is a file fails.
      */
-    function isfile($path)
+    function isFile($path)
     {
         return driver()->isfile($path);
     }
@@ -211,9 +244,9 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If determining if the path is a directory fails.
      */
-    function isdir($path)
+    function isDir($path)
     {
-        return driver()->isdir($path);
+        return driver()->isDir($path);
     }
 
     /**
@@ -226,9 +259,9 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      */
-    function mkdir($path, $mode = 0755)
+    function mkDir($path, $mode = 0755)
     {
-        return driver()->mkdir($path, $mode);
+        return driver()->mkDir($path, $mode);
     }
 
     /**
@@ -240,9 +273,9 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve string[]
      */
-    function readdir($path)
+    function lsDir($path)
     {
-        return driver()->readdir($path);
+        return driver()->lsDir($path);
     }
 
     /**
@@ -254,9 +287,9 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      */
-    function rmdir($path)
+    function rmDir($path)
     {
-        return driver()->rmdir($path);
+        return driver()->rmDir($path);
     }
 
     /**

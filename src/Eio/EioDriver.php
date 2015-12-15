@@ -110,7 +110,7 @@ class EioDriver implements Driver
         }, $delayed);
 
         if (false === $resource) {
-            throw new FileException('Could not open file.');
+            throw new FileException('Initializing file open failed.');
         }
 
         $this->poll->listen();
@@ -156,6 +156,10 @@ class EioDriver implements Driver
      */
     public function unlink($path)
     {
+        if (!(yield $this->isFile($path))) { // Ensure file exists before attempting to unlink.
+            throw new FileException('File does not exist or is a directory.');
+        }
+
         $delayed = new Delayed();
         $resource = @\eio_unlink($path, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
@@ -248,7 +252,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function isfile($path)
+    public function isFile($path)
     {
         try {
             $result = (yield $this->stat($path));
@@ -261,7 +265,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function isdir($path)
+    public function isDir($path)
     {
         try {
             $result = (yield $this->stat($path));
@@ -274,21 +278,73 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
+    public function link($source, $target)
+    {
+        return $this->doLink($source, $target, true);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function symlink($source, $target)
     {
-        $delayed = new Delayed();
-        $resource = @\eio_symlink($source, $target, null, function (Delayed $delayed, $result, $req) {
+        return $this->doLink($source, $target, false);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    private function doLink($source, $target, $hard)
+    {
+        $callback = function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
-                    sprintf('Could not create symlink: %s.', \eio_get_last_error($req))
+                    sprintf('Could not create link: %s.', \eio_get_last_error($req))
                 ));
             } else {
                 $delayed->resolve(true);
             }
+        };
+
+        $delayed = new Delayed();
+
+        if ($hard) {
+            $resource = @\eio_link($source, $target, null, $callback, $delayed);
+        } else {
+            $resource = @\eio_symlink($source, $target, null, $callback, $delayed);
+        }
+
+        if (false === $resource) {
+            throw new FileException('Could not create link.');
+        }
+
+        $this->poll->listen();
+
+        try {
+            yield $delayed;
+        } finally {
+            $this->poll->done();
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function readlink($path)
+    {
+        $delayed = new Delayed();
+        $resource = @\eio_readlink($path, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Could not read symlink: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve($result);
+            }
         }, $delayed);
 
         if (false === $resource) {
-            throw new FileException('Could not create symlink.');
+            throw new FileException('Could not read symlink.');
         }
 
         $this->poll->listen();
@@ -315,7 +371,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function mkdir($path, $mode = 0755)
+    public function mkDir($path, $mode = 0755)
     {
         $delayed = new Delayed();
         $resource = @\eio_mkdir($path, $mode, null, function (Delayed $delayed, $result, $req) {
@@ -344,7 +400,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function lsdir($path)
+    public function lsDir($path)
     {
         $delayed = new Delayed();
         $resource = @\eio_readdir($path, 0, null, function (Delayed $delayed, $result, $req) {
@@ -375,7 +431,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function rmdir($path)
+    public function rmDir($path)
     {
         $delayed = new Delayed();
         $resource = @\eio_rmdir($path, null, function (Delayed $delayed, $result, $req) {

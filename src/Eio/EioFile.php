@@ -256,6 +256,9 @@ class EioFile implements File
 
         try {
             yield $awaitable;
+        } catch (\Exception $exception) {
+            $this->close();
+            throw $exception;
         } finally {
             if ($end) {
                 $this->close();
@@ -382,6 +385,10 @@ class EioFile implements File
      */
     public function truncate($size)
     {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
         $size = (int) $size;
         if (0 >= $size) {
             $size = 0;
@@ -421,6 +428,10 @@ class EioFile implements File
      */
     public function stat()
     {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
         $delayed = new Delayed();
         $resource = @\eio_fstat($this->handle, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
@@ -477,9 +488,15 @@ class EioFile implements File
      * @return \Generator
      *
      * @resolve bool
+     *
+     * @throws \Icicle\File\Exception\FileException
      */
     private function chowngrp($uid, $gid)
     {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
         $delayed = new Delayed();
         $resource = @\eio_fchown($this->handle, $uid, $gid, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
@@ -509,6 +526,10 @@ class EioFile implements File
      */
     public function chmod($mode)
     {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
         $delayed = new Delayed();
         $resource = @\eio_fchmod($this->handle, $mode, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
