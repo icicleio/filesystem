@@ -350,6 +350,18 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
+    public function copy($path)
+    {
+        try {
+            yield $this->worker->enqueue(new Internal\FileTask('copy', [$this->path, (string) $path]));
+        } catch (TaskException $exception) {
+            throw new FileException('Copying the file failed.', 0, $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function chown($uid)
     {
         return $this->change('fchown', $uid);

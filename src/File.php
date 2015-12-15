@@ -47,6 +47,19 @@ interface File extends DuplexStream, SeekableStream
     /**
      * @coroutine
      *
+     * @param string $path
+     *
+     * @return \Generator
+     *
+     * @resolve int Size of copied file.
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    public function copy($path);
+
+    /**
+     * @coroutine
+     *
      * @param int $uid
      *
      * @return \Generator

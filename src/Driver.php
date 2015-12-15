@@ -95,7 +95,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function mkdir($path, $mode = 0777);
+    public function mkdir($path, $mode = 0755);
 
     /**
      * @coroutine
@@ -106,7 +106,7 @@ interface Driver
      *
      * @resolve string[]
      */
-    public function readdir($path);
+    public function lsdir($path);
 
     /**
      * @coroutine

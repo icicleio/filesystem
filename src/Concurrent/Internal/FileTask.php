@@ -85,7 +85,7 @@ class FileTask implements Task
             case 'isfile':
             case 'isdir':
             case 'mkdir':
-            case 'readdir':
+            case 'lsdir':
             case 'rmdir':
             case 'chmod':
             case 'chown':
@@ -250,7 +250,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function readdir($path)
+    private function lsdir($path)
     {
         $result = @scandir($path);
 

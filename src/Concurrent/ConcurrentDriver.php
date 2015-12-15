@@ -151,10 +151,10 @@ class ConcurrentDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function readdir($path)
+    public function lsdir($path)
     {
         try {
-            yield $this->pool->enqueue(new Internal\FileTask('readdir', [(string) $path]));
+            yield $this->pool->enqueue(new Internal\FileTask('lsdirf', [(string) $path]));
         } catch (TaskException $exception) {
             throw new FileException('Reading the directory failed.', 0, $exception);
         }

@@ -344,7 +344,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function readdir($path)
+    public function lsdir($path)
     {
         $delayed = new Delayed();
         $resource = @\eio_readdir($path, 0, null, function (Delayed $delayed, $result, $req) {
