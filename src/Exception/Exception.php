@@ -1,4 +1,4 @@
 <?php
 namespace Icicle\File\Exception;
 
-class Exception extends \Exception {}
+interface Exception extends \Icicle\Exception\Exception, Throwable {}

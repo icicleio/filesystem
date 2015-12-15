@@ -1,4 +1,4 @@
 <?php
 namespace Icicle\File\Exception;
 
-class FileException extends Exception {}
+class FileException extends \Exception implements Exception {}
