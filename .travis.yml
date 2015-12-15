@@ -8,16 +8,14 @@ php:
 sudo: false
 
 install:
-  - if [ "$TRAVIS_PHP_VERSION" != "7.0" ]; then
-        curl -LS https://pecl.php.net/get/eio | tar -xz;
-        pushd eio-*;
-        phpize;
-        ./configure;
-        make;
-        make install;
-        popd;
-        echo "extension=eio.so" >> "$(php -r 'echo php_ini_loaded_file();')";
-    fi
+  - curl -LS https://pecl.php.net/get/eio | tar -xz;
+    pushd eio-*;
+    phpize;
+    ./configure;
+    make;
+    make install;
+    popd;
+    echo "extension=eio.so" >> "$(php -r 'echo php_ini_loaded_file();')";
   - composer self-update
   - composer install --no-interaction --prefer-source
 
