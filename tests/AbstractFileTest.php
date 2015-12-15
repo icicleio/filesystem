@@ -10,12 +10,27 @@ abstract class AbstractFileTest extends TestCase
     const WRITE_STRING = 'abcdefghijklmnopqrstuvwxz';
 
     /**
+     * @var \Icicle\File\Concurrent\ConcurrentDriver
+     */
+    protected $driver;
+
+    /**
+     * @return \Icicle\File\Driver
+     */
+    abstract protected function createDriver();
+
+    /**
      * @param string $path
      * @param string $mode
      *
      * @return \Icicle\File\File
      */
     abstract protected function openFile($path, $mode = 'r+');
+
+    public function setUp()
+    {
+        $this->driver = $this->createDriver();
+    }
 
     public function tearDown()
     {
@@ -484,6 +499,19 @@ abstract class AbstractFileTest extends TestCase
         }
     }
 
+    /**
+     * @expectedException \Icicle\File\Exception\FileException
+     */
+    public function testStatAfterClose()
+    {
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $file->close();
+
+        $coroutine = new Coroutine($file->stat());
+        $coroutine->wait();
+    }
+
     public function testChmod()
     {
         $mode = 0777;
@@ -497,6 +525,21 @@ abstract class AbstractFileTest extends TestCase
         $stat = stat(self::PATH);
 
         $this->assertSame($mode, $stat['mode'] & 0777);
+    }
+
+    /**
+     * @depends testChmod
+     * @expectedException \Icicle\File\Exception\FileException
+     */
+    public function testChmodAfterClose()
+    {
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $file->close();
+
+        $coroutine = new Coroutine($file->chmod(0777));
+
+        $coroutine->wait();
     }
 
     public function testChown()
@@ -514,6 +557,21 @@ abstract class AbstractFileTest extends TestCase
         $this->assertSame($uid, $stat['uid']);
     }
 
+    /**
+     * @depends testChown
+     * @expectedException \Icicle\File\Exception\FileException
+     */
+    public function testChownAfterClose()
+    {
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $file->close();
+
+        $coroutine = new Coroutine($file->chown(getmypid()));
+
+        $coroutine->wait();
+    }
+
     public function testChgrp()
     {
         $gid = getmygid();
@@ -527,5 +585,20 @@ abstract class AbstractFileTest extends TestCase
         $stat = stat(self::PATH);
 
         $this->assertSame($gid, $stat['gid']);
+    }
+
+    /**
+     * @depends testChgrp
+     * @expectedException \Icicle\File\Exception\FileException
+     */
+    public function testChgrpAfterClose()
+    {
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $file->close();
+
+        $coroutine = new Coroutine($file->chgrp(getmygid()));
+
+        $coroutine->wait();
     }
 }

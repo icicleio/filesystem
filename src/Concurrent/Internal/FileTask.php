@@ -3,8 +3,8 @@ namespace Icicle\File\Concurrent\Internal;
 
 use Icicle\Concurrent\Worker\Environment;
 use Icicle\Concurrent\Worker\Task;
+use Icicle\Exception\InvalidArgumentError;
 use Icicle\File\Exception\FileException;
-use Icicle\File\Exception\InvalidArgumentError;
 
 class FileTask implements Task
 {
@@ -22,7 +22,7 @@ class FileTask implements Task
      * @param string $operation
      * @param array $args
      *
-     * @throws \Icicle\File\Exception\InvalidArgumentError
+     * @throws \Icicle\Exception\InvalidArgumentError
      */
     public function __construct($operation, array $args = [])
     {
@@ -38,7 +38,7 @@ class FileTask implements Task
      * {@inheritdoc}
      *
      * @throws \Icicle\File\Exception\FileException
-     * @throws \Icicle\File\Exception\InvalidArgumentError
+     * @throws \Icicle\Exception\InvalidArgumentError
      */
     public function run(Environment $environment)
     {

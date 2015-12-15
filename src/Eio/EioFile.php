@@ -130,7 +130,11 @@ class EioFile implements File
         }
 
         $length = (int) $length;
-        if (0 >= $length) {
+        if (0 > $length) {
+            throw new InvalidArgumentError('The length must be a non-negative integer.');
+        }
+
+        if (0 === $length) {
             $length = self::CHUNK_SIZE;
         }
 

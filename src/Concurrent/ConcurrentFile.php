@@ -6,6 +6,7 @@ use Icicle\Concurrent\Worker\Worker;
 use Icicle\Coroutine\Coroutine;
 use Icicle\Exception\InvalidArgumentError;
 use Icicle\File\Exception\FileException;
+use Icicle\File\Exception\FileTaskException;
 use Icicle\File\File;
 use Icicle\Stream\Exception\OutOfBoundsException;
 use Icicle\Stream\Exception\UnreadableException;
@@ -98,9 +99,11 @@ class ConcurrentFile implements File
             });
         }
 
-        while (!$this->queue->isEmpty()) {
-            $promise = $this->queue->shift();
-            $promise->cancel(new FileException('The file was closed.'));
+        if (!$this->queue->isEmpty()) {
+            $exception = new FileException('The file was closed.');
+            do {
+                $this->queue->shift()->cancel($exception);
+            } while (!$this->queue->isEmpty());
         }
 
         $this->open = false;
@@ -125,15 +128,25 @@ class ConcurrentFile implements File
         }
 
         $length = (int) $length;
-        if (0 >= $length) {
+        if (0 > $length) {
+            throw new InvalidArgumentError('The length must be a non-negative integer.');
+        }
+
+        if (0 === $length) {
             $length = self::CHUNK_SIZE;
         }
 
+        $awaitable = new Coroutine($this->worker->enqueue(new Internal\FileTask('fread', [$length])));
+
+        if ($timeout) {
+            $awaitable = $awaitable->timeout($timeout);
+        }
+
         try {
-            $data = (yield $this->worker->enqueue(new Internal\FileTask('fread', [$length])));
+            $data = (yield $awaitable);
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileException('Reading from the file failed.', 0, $exception);
+            throw new FileTaskException('Reading from the file failed.', $exception);
         }
 
         $byte = (string) $byte;
@@ -163,7 +176,7 @@ class ConcurrentFile implements File
      */
     public function write($data, $timeout = 0)
     {
-        return $this->send($data, false);
+        return $this->send($data, $timeout, false);
     }
 
     /**
@@ -171,7 +184,7 @@ class ConcurrentFile implements File
      */
     public function end($data = '', $timeout = 0)
     {
-        return $this->send($data, true);
+        return $this->send($data, $timeout, true);
     }
 
     /**
@@ -187,7 +200,7 @@ class ConcurrentFile implements File
      * @throws \Icicle\File\Exception\FileException
      * @throws \Icicle\Stream\Exception\UnwritableException
      */
-    protected function send($data, $end = false)
+    protected function send($data, $timeout, $end = false)
     {
         if (!$this->isWritable()) {
             throw new UnwritableException('The file is no longer writable.');
@@ -196,11 +209,11 @@ class ConcurrentFile implements File
         $task = new Internal\FileTask('fwrite', [(string) $data]);
 
         if ($this->queue->isEmpty()) {
-            $promise = new Coroutine($this->worker->enqueue($task));
-            $this->queue->push($promise);
+            $awaitable = new Coroutine($this->worker->enqueue($task));
+            $this->queue->push($awaitable);
         } else {
-            $promise = $this->queue->top();
-            $promise = $promise->then(function () use ($task) {
+            $awaitable = $this->queue->top();
+            $awaitable = $awaitable->then(function () use ($task) {
                 return new Coroutine($this->worker->enqueue($task));
             });
         }
@@ -209,8 +222,12 @@ class ConcurrentFile implements File
             $this->writable = false;
         }
 
+        if ($timeout) {
+            $awaitable = $awaitable->timeout($timeout);
+        }
+
         try {
-            $written = (yield $promise);
+            $written = (yield $awaitable);
 
             if ($this->append) {
                 $this->size += $written;
@@ -222,7 +239,7 @@ class ConcurrentFile implements File
             }
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileException('Write to the file failed.', 0, $exception);
+            throw new FileTaskException('Write to the file failed.', $exception);
         } finally {
             if ($end) {
                 $this->close();
@@ -246,6 +263,8 @@ class ConcurrentFile implements File
         if (!$this->isOpen()) {
             throw new UnseekableException('The file is no longer seekable.');
         }
+
+        $offset = (int) $offset;
 
         switch ($whence) {
             case \SEEK_SET:
@@ -275,11 +294,11 @@ class ConcurrentFile implements File
 
         try {
             $this->position = (yield $this->worker->enqueue(
-                new Internal\FileTask('fseek', [(int) $offset, \SEEK_SET])
+                new Internal\FileTask('fseek', [$offset, \SEEK_SET])
             ));
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileException('Seeking in the file failed.', 0, $exception);
+            throw new FileTaskException('Seeking in the file failed.', $exception);
         }
 
         if ($this->position > $this->size) {
@@ -311,17 +330,23 @@ class ConcurrentFile implements File
     public function truncate($size)
     {
         if (!$this->isReadable() && !$this->isWritable()) {
-            throw new UnseekableException('The file is no longer seekable.');
+            throw new FileException('The file is no longer seekable.');
+        }
+
+        $size = (int) $size;
+
+        if (0 > $size) {
+            throw new InvalidArgumentError('The size must be a non-negative integer.');
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask('ftruncate', [(int) $size]));
+            yield $this->worker->enqueue(new Internal\FileTask('ftruncate', [$size]));
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileException('Seeking in the file failed.', 0, $exception);
+            throw new FileTaskException('Truncating the file failed.', $exception);
         }
 
-        $this->size = (int) $size;
+        $this->size = $size;
 
         if ($this->position > $size) {
             $this->position = $size;
@@ -336,14 +361,14 @@ class ConcurrentFile implements File
     public function stat()
     {
         if (!$this->isOpen()) {
-            throw new UnseekableException('The file has been closed.');
+            throw new FileException('The file has been closed.');
         }
 
         try {
             yield $this->worker->enqueue(new Internal\FileTask('fstat'));
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileException('Seeking in the file failed.', 0, $exception);
+            throw new FileTaskException('Stating file failed.', $exception);
         }
     }
 
@@ -355,7 +380,7 @@ class ConcurrentFile implements File
         try {
             yield $this->worker->enqueue(new Internal\FileTask('copy', [$this->path, (string) $path]));
         } catch (TaskException $exception) {
-            throw new FileException('Copying the file failed.', 0, $exception);
+            throw new FileTaskException('Copying the file failed.', $exception);
         }
     }
 
@@ -401,7 +426,7 @@ class ConcurrentFile implements File
             yield $this->worker->enqueue(new Internal\FileTask($operation, [(int) $value]));
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileException(sprintf('Changing the file %s failed.', $operation), 0, $exception);
+            throw new FileTaskException(sprintf('%s failed.', $operation), $exception);
         }
     }
 }

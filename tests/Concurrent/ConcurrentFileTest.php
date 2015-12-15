@@ -7,14 +7,9 @@ use Icicle\Tests\File\AbstractFileTest;
 
 class ConcurrentFileTest extends AbstractFileTest
 {
-    /**
-     * @var \Icicle\File\Concurrent\ConcurrentDriver
-     */
-    protected $driver;
-
-    public function setUp()
+    public function createDriver()
     {
-        $this->driver = new ConcurrentDriver();
+        return new ConcurrentDriver();
     }
 
     protected function openFile($path, $mode = 'r+')
