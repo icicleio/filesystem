@@ -9,12 +9,41 @@ abstract class AbstractFileTest extends TestCase
     const WRITE_STRING = 'abcdefghijklmnopqrstuvwxz';
 
     /**
+     * @var \Icicle\File\Driver
+     */
+    protected $driver;
+
+    /**
+     * @return \Icicle\File\Driver
+     */
+    abstract protected function createDriver();
+
+    /**
      * @param string $path
      * @param string $mode
      *
      * @return \Icicle\File\File
      */
     abstract protected function openFile($path, $mode = 'r+');
+
+    public function setUp()
+    {
+        $this->driver = $this->createDriver();
+    }
+
+    public function tearDown()
+    {
+        parent::tearDown();
+        unset($this->driver);
+    }
+
+    /**
+     * @return \Icicle\File\Driver
+     */
+    public function getDriver()
+    {
+        return $this->driver;
+    }
 
     public function testIsOpen()
     {

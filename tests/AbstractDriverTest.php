@@ -22,6 +22,12 @@ abstract class AbstractDriverTest extends TestCase
         $this->driver = $this->createDriver();
     }
 
+    public function tearDown()
+    {
+        parent::tearDown();
+        unset($this->driver);
+    }
+
     public function testOpen()
     {
         $coroutine = new Coroutine($this->driver->open(self::PATH, 'c+'));

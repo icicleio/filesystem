@@ -10,16 +10,14 @@ class ConcurrentFileTest extends AbstractFileTest
     /**
      * @var \Icicle\File\Driver
      */
-    protected static $driver;
-
-    public static function setUpBeforeClass()
+    protected function createDriver()
     {
-        self::$driver = new ConcurrentDriver();
+        return new ConcurrentDriver();
     }
 
     protected function openFile($path, $mode = 'r+')
     {
-        $coroutine = new Coroutine(self::$driver->open($path, $mode));
+        $coroutine = new Coroutine($this->getDriver()->open($path, $mode));
 
         return $coroutine->wait();
     }
