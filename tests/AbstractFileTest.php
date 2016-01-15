@@ -34,7 +34,7 @@ abstract class AbstractFileTest extends TestCase
     public function tearDown()
     {
         parent::tearDown();
-        unset($this->driver);
+        $this->driver = null;
     }
 
     /**

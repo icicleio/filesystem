@@ -2,7 +2,6 @@
 namespace Icicle\File\Concurrent;
 
 use Icicle\Concurrent\Exception\TaskException;
-use Icicle\Concurrent\Worker\Queue;
 use Icicle\Concurrent\Worker\Worker;
 use Icicle\Coroutine\Coroutine;
 use Icicle\Exception\InvalidArgumentError;
@@ -16,8 +15,6 @@ use Icicle\Stream\Exception\UnwritableException;
 
 class ConcurrentFile implements File
 {
-    private $workerQueue;
-
     /**
      * @var \Icicle\Concurrent\Worker\Worker
      */
@@ -70,9 +67,8 @@ class ConcurrentFile implements File
      * @param int $size
      * @param bool $append
      */
-    public function __construct(Queue $queue, Worker $worker, $id, $path, $size, $append = false)
+    public function __construct(Worker $worker, $id, $path, $size, $append = false)
     {
-        $this->workerQueue = $queue;
         $this->worker = $worker;
         $this->id = $id;
         $this->path = $path;
@@ -113,13 +109,7 @@ class ConcurrentFile implements File
     {
         if ($this->open && $this->worker->isRunning()) {
             $coroutine = new Coroutine($this->worker->enqueue(new Internal\FileTask('fclose', [$this->id])));
-            $coroutine->cleanup(function () {
-                if ($this->workerQueue->isRunning()) {
-                    $this->workerQueue->push($this->worker);
-                }
-            })->done(null, function () {
-                $this->worker->kill();
-            });
+            $coroutine->done(null, [$this->worker, 'kill']);
         }
 
         if (!$this->queue->isEmpty()) {
