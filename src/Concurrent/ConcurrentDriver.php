@@ -2,7 +2,7 @@
 namespace Icicle\File\Concurrent;
 
 use Icicle\Concurrent\Exception\TaskException;
-use Icicle\Concurrent\Worker\DefaultPool;
+use Icicle\Concurrent\Worker;
 use Icicle\Concurrent\Worker\Pool;
 use Icicle\File\Driver;
 use Icicle\File\Exception\FileTaskException;
@@ -19,16 +19,9 @@ class ConcurrentDriver implements Driver
      */
     public function __construct(Pool $pool = null)
     {
-        $this->pool = $pool ?: new DefaultPool();
+        $this->pool = $pool ?: Worker\pool();
         if (!$this->pool->isRunning()) {
             $this->pool->start();
-        }
-    }
-
-    public function __destruct()
-    {
-        if ($this->pool->isRunning()) {
-            $this->pool->kill();
         }
     }
 

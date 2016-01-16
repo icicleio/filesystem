@@ -138,7 +138,7 @@ class FileTask implements Task
     private function rename($oldPath, $newPath)
     {
         if (!@rename($oldPath, $newPath)) {
-            $message = 'Could not unlink file.';
+            $message = 'Could not rename file.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
             }
@@ -160,7 +160,7 @@ class FileTask implements Task
         $result = @stat($path);
 
         if (false === $result) {
-            $message = 'Could not unlink file.';
+            $message = 'Could not stat file.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
             }
