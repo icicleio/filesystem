@@ -143,7 +143,7 @@ class EioFile implements File
 
         $delayed = new Delayed();
 
-        $resource = @\eio_read(
+        \eio_read(
             $this->handle,
             $length,
             $this->position,
@@ -159,10 +159,6 @@ class EioFile implements File
             },
             $delayed
         );
-
-        if (false === $resource) {
-            throw new FileException('Could not initialize file read.');
-        }
 
         $this->poll->listen();
 
@@ -278,7 +274,7 @@ class EioFile implements File
     {
         $length = strlen($data);
         $delayed = new Delayed();
-        $resource = @\eio_write(
+        \eio_write(
             $this->handle,
             $data,
             $length,
@@ -308,10 +304,6 @@ class EioFile implements File
             },
             $delayed
         );
-
-        if (false === $resource) {
-            throw new FileException('Could not initialize file write.');
-        }
 
         return $delayed;
     }
@@ -395,7 +387,7 @@ class EioFile implements File
         }
 
         $delayed = new Delayed();
-        $resource = @\eio_ftruncate($this->handle, $size, null, function (Delayed $delayed, $result, $req) {
+        \eio_ftruncate($this->handle, $size, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Truncating the file failed: %s.', \eio_get_last_error($req))
@@ -404,10 +396,6 @@ class EioFile implements File
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not truncate file.');
-        }
 
         $this->poll->listen();
 
@@ -433,7 +421,7 @@ class EioFile implements File
         }
 
         $delayed = new Delayed();
-        $resource = @\eio_fstat($this->handle, null, function (Delayed $delayed, $result, $req) {
+        \eio_fstat($this->handle, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Getting file status failed: %s.', \eio_get_last_error($req))
@@ -442,10 +430,6 @@ class EioFile implements File
                 $delayed->resolve($result);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not initialize getting file status.');
-        }
 
         $this->poll->listen();
 
@@ -498,7 +482,7 @@ class EioFile implements File
         }
 
         $delayed = new Delayed();
-        $resource = @\eio_fchown($this->handle, $uid, $gid, null, function (Delayed $delayed, $result, $req) {
+        \eio_fchown($this->handle, $uid, $gid, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Changing the file owner or group failed: %s.', \eio_get_last_error($req))
@@ -507,10 +491,6 @@ class EioFile implements File
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Invalid uid and/or gid.');
-        }
 
         $this->poll->listen();
 
@@ -531,7 +511,7 @@ class EioFile implements File
         }
 
         $delayed = new Delayed();
-        $resource = @\eio_fchmod($this->handle, $mode, null, function (Delayed $delayed, $result, $req) {
+        \eio_fchmod($this->handle, $mode, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Changing the file mode failed: %s.', \eio_get_last_error($req))
@@ -540,10 +520,6 @@ class EioFile implements File
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Invalid mode.');
-        }
 
         $this->poll->listen();
 
@@ -566,7 +542,7 @@ class EioFile implements File
     public function copy($path)
     {
         $delayed = new Delayed();
-        $resource = @\eio_open(
+        \eio_open(
             $path,
             \EIO_O_WRONLY | \EIO_O_CREAT | \EIO_O_TRUNC,
             0644,
@@ -583,10 +559,6 @@ class EioFile implements File
             $delayed
         );
 
-        if (false === $resource) {
-            throw new FileException('Could not open file.');
-        }
-
         $this->poll->listen();
 
         try {
@@ -596,7 +568,7 @@ class EioFile implements File
         }
 
         $delayed = new Delayed();
-        $resource = @\eio_sendfile(
+        \eio_sendfile(
             $handle,
             $this->handle,
             0,
@@ -613,10 +585,6 @@ class EioFile implements File
             },
             $delayed
         );
-
-        if (false === $resource) {
-            throw new FileException('Could not copy file.');
-        }
 
         $this->poll->listen();
 

@@ -99,7 +99,7 @@ class EioDriver implements Driver
         $chmod = ($flags & \EIO_O_CREAT) ? 0644 : 0;
 
         $delayed = new Delayed();
-        $resource = @\eio_open($path, $flags, $chmod, null, function (Delayed $delayed, $handle, $req) {
+        \eio_open($path, $flags, $chmod, null, function (Delayed $delayed, $handle, $req) {
             if (-1 === $handle) {
                 $delayed->reject(new FileException(
                     sprintf('Opening the file failed: %s.', \eio_get_last_error($req))
@@ -108,10 +108,6 @@ class EioDriver implements Driver
                 $delayed->resolve($handle);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Initializing file open failed.');
-        }
 
         $this->poll->listen();
 
@@ -125,7 +121,7 @@ class EioDriver implements Driver
             $size = 0;
         } else {
             $delayed = new Delayed();
-            $resource = @\eio_fstat($handle, null, function (Delayed $delayed, $result, $req) {
+            \eio_fstat($handle, null, function (Delayed $delayed, $result, $req) {
                 if (-1 === $result) {
                     $delayed->reject(new FileException(
                         sprintf('Finding file size failed: %s.', \eio_get_last_error($req))
@@ -134,10 +130,6 @@ class EioDriver implements Driver
                     $delayed->resolve($result['size']);
                 }
             }, $delayed);
-
-            if (false === $resource) {
-                throw new FileException('Could not get file size.');
-            }
 
             $this->poll->listen();
 
@@ -161,7 +153,7 @@ class EioDriver implements Driver
         }
 
         $delayed = new Delayed();
-        $resource = @\eio_unlink($path, null, function (Delayed $delayed, $result, $req) {
+        \eio_unlink($path, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Unlinking the file failed: %s.', \eio_get_last_error($req))
@@ -170,10 +162,6 @@ class EioDriver implements Driver
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not unlink file.');
-        }
 
         $this->poll->listen();
 
@@ -190,7 +178,7 @@ class EioDriver implements Driver
     public function rename($oldPath, $newPath)
     {
         $delayed = new Delayed();
-        $resource = @\eio_rename($oldPath, $newPath, null, function (Delayed $delayed, $result, $req) {
+        \eio_rename($oldPath, $newPath, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Renaming the file failed: %s.', \eio_get_last_error($req))
@@ -199,10 +187,6 @@ class EioDriver implements Driver
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not rename file.');
-        }
 
         $this->poll->listen();
 
@@ -219,7 +203,7 @@ class EioDriver implements Driver
     public function stat($path)
     {
         $delayed = new Delayed();
-        $resource = @\eio_stat($path, null, function (Delayed $delayed, $result, $req) {
+        \eio_stat($path, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Could not stat file: %s.', \eio_get_last_error($req))
@@ -228,10 +212,6 @@ class EioDriver implements Driver
                 $delayed->resolve($result);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not stat file.');
-        }
 
         $this->poll->listen();
 
@@ -309,13 +289,9 @@ class EioDriver implements Driver
         $delayed = new Delayed();
 
         if ($hard) {
-            $resource = @\eio_link($source, $target, null, $callback, $delayed);
+            \eio_link($source, $target, null, $callback, $delayed);
         } else {
-            $resource = @\eio_symlink($source, $target, null, $callback, $delayed);
-        }
-
-        if (false === $resource) {
-            throw new FileException('Could not create link.');
+            \eio_symlink($source, $target, null, $callback, $delayed);
         }
 
         $this->poll->listen();
@@ -333,7 +309,7 @@ class EioDriver implements Driver
     public function readlink($path)
     {
         $delayed = new Delayed();
-        $resource = @\eio_readlink($path, null, function (Delayed $delayed, $result, $req) {
+        \eio_readlink($path, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Could not read symlink: %s.', \eio_get_last_error($req))
@@ -342,10 +318,6 @@ class EioDriver implements Driver
                 $delayed->resolve($result);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not read symlink.');
-        }
 
         $this->poll->listen();
 
@@ -374,7 +346,7 @@ class EioDriver implements Driver
     public function mkDir($path, $mode = 0755)
     {
         $delayed = new Delayed();
-        $resource = @\eio_mkdir($path, $mode, null, function (Delayed $delayed, $result, $req) {
+        \eio_mkdir($path, $mode, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Could not create directory: %s.', \eio_get_last_error($req))
@@ -383,10 +355,6 @@ class EioDriver implements Driver
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not create directory.');
-        }
 
         $this->poll->listen();
 
@@ -403,7 +371,7 @@ class EioDriver implements Driver
     public function lsDir($path)
     {
         $delayed = new Delayed();
-        $resource = @\eio_readdir($path, 0, null, function (Delayed $delayed, $result, $req) {
+        \eio_readdir($path, 0, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Could not read directory: %s.', \eio_get_last_error($req))
@@ -414,10 +382,6 @@ class EioDriver implements Driver
                 $delayed->resolve($result);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not read directory.');
-        }
 
         $this->poll->listen();
 
@@ -434,7 +398,7 @@ class EioDriver implements Driver
     public function rmDir($path)
     {
         $delayed = new Delayed();
-        $resource = @\eio_rmdir($path, null, function (Delayed $delayed, $result, $req) {
+        \eio_rmdir($path, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Could not remove directory: %s.', \eio_get_last_error($req))
@@ -443,10 +407,6 @@ class EioDriver implements Driver
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('Could not remove directory.');
-        }
 
         $this->poll->listen();
 
@@ -486,7 +446,7 @@ class EioDriver implements Driver
     private function chowngrp($path, $uid, $gid)
     {
         $delayed = new Delayed();
-        $resource = @\eio_chown($path, $uid, $gid, null, function (Delayed $delayed, $result, $req) {
+        \eio_chown($path, $uid, $gid, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Changing the owner or group failed: %s.', \eio_get_last_error($req))
@@ -495,10 +455,6 @@ class EioDriver implements Driver
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('File not found or invalid uid and/or gid.');
-        }
 
         $this->poll->listen();
 
@@ -515,7 +471,7 @@ class EioDriver implements Driver
     public function chmod($path, $mode)
     {
         $delayed = new Delayed();
-        $resource = @\eio_chmod($path, $mode, null, function (Delayed $delayed, $result, $req) {
+        \eio_chmod($path, $mode, null, function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
                 $delayed->reject(new FileException(
                     sprintf('Changing the owner failed: %s.', \eio_get_last_error($req))
@@ -524,10 +480,6 @@ class EioDriver implements Driver
                 $delayed->resolve(true);
             }
         }, $delayed);
-
-        if (false === $resource) {
-            throw new FileException('File not found or invalid mode.');
-        }
 
         $this->poll->listen();
 
