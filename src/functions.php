@@ -36,6 +36,8 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     }
 
     /**
+     * @coroutine
+     *
      * @param string $path
      *
      * @return \Generator
@@ -61,8 +63,11 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     }
 
     /**
+     * @coroutine
+     *
      * @param string $path
      * @param string $data
+     * @param bool $append
      *
      * @return \Generator
      *
@@ -70,10 +75,10 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    function put($path, $data)
+    function put($path, $data, $append = false)
     {
         /** @var \Icicle\File\File $file */
-        $file = (yield driver()->open($path, 'w'));
+        $file = (yield driver()->open($path, $append ? 'a' : 'w'));
 
         $written = (yield $file->write($data));
 
