@@ -17,7 +17,7 @@ interface Driver
      *
      * @throws \Icicle\File\Exception\FileException If the file is not found or cannot be opened.
      */
-    public function open($path, $mode);
+    public function open(string $path, string $mode): \Generator;
 
     /**
      * @coroutine
@@ -30,7 +30,7 @@ interface Driver
      *
      * @throws \Icicle\File\Exception\FileException If unlinking fails.
      */
-    public function unlink($path);
+    public function unlink(string $path): \Generator;
 
     /**
      * @coroutine
@@ -43,7 +43,7 @@ interface Driver
      *
      * @throws \Icicle\File\Exception\FileException If getting the file stats fails.
      */
-    public function stat($path);
+    public function stat(string $path): \Generator;
 
     /**
      * @coroutine
@@ -57,7 +57,7 @@ interface Driver
      *
      * @throws \Icicle\File\Exception\FileException If creatingn the hard link fails.
      */
-    public function link($source, $target);
+    public function link(string $source, string $target): \Generator;
 
     /**
      * @coroutine
@@ -71,7 +71,7 @@ interface Driver
      *
      * @throws \Icicle\File\Exception\FileException If creating the symlink fails.
      */
-    public function symlink($source, $target);
+    public function symlink(string $source, string $target): \Generator;
 
     /**
      * @coroutine
@@ -84,7 +84,7 @@ interface Driver
      *
      * @throws \Icicle\File\Exception\FileException If reading the symlink fails.
      */
-    public function readlink($path);
+    public function readlink(string $path): \Generator;
 
     /**
      * @coroutine
@@ -96,7 +96,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function rename($oldPath, $newPath);
+    public function rename(string $oldPath, string $newPath): \Generator;
 
     /**
      * @coroutine
@@ -110,7 +110,7 @@ interface Driver
      *
      * @throws \Icicle\File\Exception\FileException If unlinking fails.
      */
-    public function copy($source, $target);
+    public function copy(string $source, string $target): \Generator;
 
     /**
      * @coroutine
@@ -122,7 +122,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function mkDir($path, $mode = 0755);
+    public function mkDir(string $path, int $mode = 0755): \Generator;
 
     /**
      * @coroutine
@@ -133,7 +133,7 @@ interface Driver
      *
      * @resolve string[]
      */
-    public function lsDir($path);
+    public function lsDir(string $path): \Generator;
 
     /**
      * @coroutine
@@ -144,7 +144,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function rmDir($path);
+    public function rmDir(string $path): \Generator;
 
     /**
      * @coroutine
@@ -155,7 +155,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function isFile($path);
+    public function isFile(string $path): \Generator;
 
     /**
      * @coroutine
@@ -166,7 +166,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function isDir($path);
+    public function isDir(string $path): \Generator;
 
     /**
      * @coroutine
@@ -178,7 +178,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function chown($path, $uid);
+    public function chown(string $path, int $uid): \Generator;
 
     /**
      * @coroutine
@@ -190,7 +190,7 @@ interface Driver
      *
      * @resolve bool
      */
-    public function chgrp($path, $gid);
+    public function chgrp(string $path, int $gid): \Generator;
 
     /**
      * @coroutine
@@ -202,5 +202,5 @@ interface Driver
      *
      * @resolve bool
      */
-    public function chmod($path, $mode);
+    public function chmod(string $path, int $mode): \Generator;
 }

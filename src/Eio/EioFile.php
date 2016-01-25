@@ -1,14 +1,11 @@
 <?php
 namespace Icicle\File\Eio;
 
+use Icicle\Awaitable\Awaitable;
 use Icicle\Awaitable\Delayed;
 use Icicle\Exception\InvalidArgumentError;
-use Icicle\File\Exception\FileException;
-use Icicle\File\File;
-use Icicle\Stream\Exception\OutOfBoundsException;
-use Icicle\Stream\Exception\UnreadableException;
-use Icicle\Stream\Exception\UnseekableException;
-use Icicle\Stream\Exception\UnwritableException;
+use Icicle\File\{Exception\FileException, File};
+use Icicle\Stream\Exception\{OutOfBoundsException, UnreadableException, UnseekableException, UnwritableException};
 
 class EioFile implements File
 {
@@ -59,7 +56,7 @@ class EioFile implements File
      * @param int $size
      * @param bool $append
      */
-    public function __construct(EioPoll $poll, $handle, $path, $size, $append = false)
+    public function __construct(EioPoll $poll, int $handle, string $path, int $size, bool $append = false)
     {
         $this->poll = $poll;
         $this->handle = $handle;
@@ -79,7 +76,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function getPath()
+    public function getPath(): string
     {
         return $this->path;
     }
@@ -87,7 +84,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function isOpen()
+    public function isOpen(): bool
     {
         return 0 !== $this->handle;
     }
@@ -115,7 +112,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function eof()
+    public function eof(): bool
     {
         return $this->position === $this->size;
     }
@@ -123,13 +120,12 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function read($length = 0, $byte = null, $timeout = 0)
+    public function read(int $length = 0, string $byte = null, float $timeout = 0): \Generator
     {
         if (!$this->isReadable()) {
             throw new UnreadableException('The file is no longer readable.');
         }
 
-        $length = (int) $length;
         if (0 > $length) {
             throw new InvalidArgumentError('The length must be a non-negative integer.');
         }
@@ -167,12 +163,11 @@ class EioFile implements File
         }
 
         try {
-            $data = (yield $delayed);
+            $data = yield $delayed;
         } finally {
             $this->poll->done();
         }
 
-        $byte = (string) $byte;
         $byte = strlen($byte) ? $byte[0] : null;
 
         if (null !== $byte && false !== ($position = strpos($data, $byte))) {
@@ -181,13 +176,13 @@ class EioFile implements File
 
         $this->position += strlen($data);
 
-        yield $data;
+        return $data;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function isReadable()
+    public function isReadable(): bool
     {
         return $this->isOpen() && !$this->eof();
     }
@@ -195,7 +190,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function write($data, $timeout = 0)
+    public function write(string $data, float $timeout = 0): \Generator
     {
         return $this->send($data, $timeout, false);
     }
@@ -203,7 +198,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function end($data = '', $timeout = 0)
+    public function end(string $data = '', float $timeout = 0)
     {
         return $this->send($data, $timeout, true);
     }
@@ -221,13 +216,11 @@ class EioFile implements File
      *
      * @throws \Icicle\Stream\Exception\UnwritableException
      */
-    protected function send($data, $timeout, $end = false)
+    protected function send(string $data, float $timeout, bool $end = false): \Generator
     {
         if (!$this->isWritable()) {
             throw new UnwritableException('The file is no longer writable.');
         }
-
-        $data = (string) $data;
 
         if ($this->queue->isEmpty()) {
             $awaitable = $this->push($data);
@@ -251,7 +244,7 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            yield $awaitable;
+            return yield $awaitable;
         } catch (\Exception $exception) {
             $this->close();
             throw $exception;
@@ -270,7 +263,7 @@ class EioFile implements File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function push($data)
+    private function push(string $data): Awaitable
     {
         $length = strlen($data);
         $delayed = new Delayed();
@@ -311,7 +304,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function isWritable()
+    public function isWritable(): bool
     {
         return $this->writable;
     }
@@ -319,13 +312,11 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function seek($offset, $whence = \SEEK_SET, $timeout = 0)
+    public function seek(int $offset, int $whence = \SEEK_SET, float $timeout = 0): \Generator
     {
         if (!$this->isOpen()) {
             throw new UnseekableException('The file is no longer seekable.');
         }
-
-        $offset = (int) $offset;
 
         switch ($whence) {
             case \SEEK_SET:
@@ -353,13 +344,15 @@ class EioFile implements File
             $this->size = $this->position;
         }
 
-        yield $this->position;
+        return $this->position;
+
+        yield; // Unreachable, but makes method a coroutine.
     }
 
     /**
      * {@inheritdoc}
      */
-    public function tell()
+    public function tell(): int
     {
         return $this->position;
     }
@@ -367,7 +360,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function getLength()
+    public function getLength(): int
     {
         return $this->size;
     }
@@ -375,13 +368,12 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function truncate($size)
+    public function truncate(int $size): \Generator
     {
         if (!$this->isOpen()) {
             throw new FileException('The file has been closed.');
         }
 
-        $size = (int) $size;
         if (0 >= $size) {
             $size = 0;
         }
@@ -400,12 +392,14 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            $result = yield $delayed;
 
             $this->size = $size;
             if ($this->position > $size) {
                 $this->position = $size;
             }
+
+            return $result;
         } finally {
             $this->poll->done();
         }
@@ -414,7 +408,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function stat()
+    public function stat(): \Generator
     {
         if (!$this->isOpen()) {
             throw new FileException('The file has been closed.');
@@ -434,7 +428,7 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            $stat = (yield $delayed);
+            $stat = yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -444,13 +438,13 @@ class EioFile implements File
             $numeric[$key] = $stat[$name];
         }
 
-        yield array_merge($numeric, $stat);
+        return array_merge($numeric, $stat);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function chown($uid)
+    public function chown(int $uid): \Generator
     {
         return $this->chowngrp($uid, -1);
     }
@@ -458,7 +452,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function chgrp($gid)
+    public function chgrp(int $gid): \Generator
     {
         return $this->chowngrp(-1, $gid);
     }
@@ -475,7 +469,7 @@ class EioFile implements File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function chowngrp($uid, $gid)
+    private function chowngrp(int $uid, int $gid): \Generator
     {
         if (!$this->isOpen()) {
             throw new FileException('The file has been closed.');
@@ -495,7 +489,7 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -504,7 +498,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function chmod($mode)
+    public function chmod(int $mode): \Generator
     {
         if (!$this->isOpen()) {
             throw new FileException('The file has been closed.');
@@ -524,7 +518,7 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -539,7 +533,7 @@ class EioFile implements File
      *
      * @resolve int
      */
-    public function copy($path)
+    public function copy(string $path): \Generator
     {
         $delayed = new Delayed();
         \eio_open(
@@ -562,7 +556,7 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            $handle = (yield $delayed);
+            $handle = yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -595,6 +589,6 @@ class EioFile implements File
             \eio_close($handle);
         }
 
-        yield $this->size;
+        return $this->size;
     }
 }

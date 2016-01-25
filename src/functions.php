@@ -1,8 +1,7 @@
 <?php
 namespace Icicle\File;
 
-use Icicle\File\Concurrent\ConcurrentDriver;
-use Icicle\File\Eio\EioDriver;
+use Icicle\File\{Concurrent\ConcurrentDriver, Eio\EioDriver};
 
 if (!\function_exists(__NAMESPACE__ . '\driver')) {
     /**
@@ -10,7 +9,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @return \Icicle\File\Driver
      */
-    function driver(Driver $driver = null)
+    function driver(Driver $driver = null): Driver
     {
         static $instance;
 
@@ -26,7 +25,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     /**
      * @return \Icicle\File\Driver
      */
-    function create()
+    function create(): Driver
     {
         if (EioDriver::enabled()) {
             return new EioDriver();
@@ -46,20 +45,20 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    function get($path)
+    function get(string $path): \Generator
     {
         /** @var \Icicle\File\File $file */
-        $file = (yield driver()->open($path, 'r'));
+        $file = yield from driver()->open($path, 'r');
 
         $data = '';
 
         while (!$file->eof()) {
-            $data .= (yield $file->read());
+            $data .= yield from $file->read();
         }
 
         $file->close();
 
-        yield $data;
+        return $data;
     }
 
     /**
@@ -75,16 +74,16 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    function put($path, $data, $append = false)
+    function put(string $path, string $data, bool $append = false): \Generator
     {
         /** @var \Icicle\File\File $file */
-        $file = (yield driver()->open($path, $append ? 'a' : 'w'));
+        $file = yield from driver()->open($path, $append ? 'a' : 'w');
 
-        $written = (yield $file->write($data));
+        $written = yield from $file->write($data);
 
         $file->close();
 
-        yield $written;
+        return $written;
     }
 
     /**
@@ -101,7 +100,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If the file is not found or cannot be opened.
      */
-    function open($path, $mode)
+    function open(string $path, string $mode): \Generator
     {
         return driver()->open($path, $mode);
     }
@@ -117,7 +116,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If unlinking the file fails.
      */
-    function unlink($path)
+    function unlink(string $path): \Generator
     {
         return driver()->unlink($path);
     }
@@ -133,7 +132,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If getting the file stats fails.
      */
-    function stat($path)
+    function stat(string $path): \Generator
     {
         return driver()->stat($path);
     }
@@ -150,7 +149,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If renaming the file fails.
      */
-    function rename($oldPath, $newPath)
+    function rename(string $oldPath, string $newPath): \Generator
     {
         return driver()->rename($oldPath, $newPath);
     }
@@ -167,7 +166,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If creating the hard link fails.
      */
-    function link($source, $target)
+    function link(string $source, string $target): \Generator
     {
         return driver()->link($source, $target);
     }
@@ -183,7 +182,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If reading the symlink fails.
      */
-    function readlink($path)
+    function readlink(string $path): \Generator
     {
         return driver()->readlink($path);
     }
@@ -200,7 +199,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If creating the symlink fails.
      */
-    function symlink($source, $target)
+    function symlink(string $source, string $target): \Generator
     {
         return driver()->symlink($source, $target);
     }
@@ -217,7 +216,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If copying the file fails.
      */
-    function copy($source, $target)
+    function copy(string $source, string $target): \Generator
     {
         return driver()->copy($source, $target);
     }
@@ -233,7 +232,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If determining if the path is a file fails.
      */
-    function isFile($path)
+    function isFile(string $path): \Generator
     {
         return driver()->isfile($path);
     }
@@ -249,7 +248,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @throws \Icicle\File\Exception\FileException If determining if the path is a directory fails.
      */
-    function isDir($path)
+    function isDir(string $path): \Generator
     {
         return driver()->isDir($path);
     }
@@ -264,7 +263,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      */
-    function mkDir($path, $mode = 0755)
+    function mkDir(string $path, int $mode = 0755): \Generator
     {
         return driver()->mkDir($path, $mode);
     }
@@ -278,7 +277,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve string[]
      */
-    function lsDir($path)
+    function lsDir(string $path): \Generator
     {
         return driver()->lsDir($path);
     }
@@ -292,7 +291,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      */
-    function rmDir($path)
+    function rmDir(string $path): \Generator
     {
         return driver()->rmDir($path);
     }
@@ -307,7 +306,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      */
-    function chown($path, $uid)
+    function chown(string $path, int $uid): \Generator
     {
         return driver()->chown($path, $uid);
     }
@@ -322,7 +321,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      */
-    function chgrp($path, $gid)
+    function chgrp(string $path, int $gid): \Generator
     {
         return driver()->chgrp($path, $gid);
     }
@@ -337,7 +336,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      *
      * @resolve bool
      */
-    function chmod($path, $mode)
+    function chmod(string $path, int $mode): \Generator
     {
         return driver()->chmod($path, $mode);
     }

@@ -1,8 +1,7 @@
 <?php
 namespace Icicle\File\Concurrent\Internal;
 
-use Icicle\Concurrent\Worker\Environment;
-use Icicle\Concurrent\Worker\Task;
+use Icicle\Concurrent\Worker\{Environment, Task};
 use Icicle\Exception\InvalidArgumentError;
 use Icicle\File\Exception\FileException;
 
@@ -24,7 +23,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\Exception\InvalidArgumentError
      */
-    public function __construct($operation, array $args = [])
+    public function __construct(string $operation, array $args = [])
     {
         if (!strlen($operation)) {
             throw new InvalidArgumentError('Operation must be a non-empty string.');
@@ -73,7 +72,7 @@ class FileTask implements Task
                 case 'fseek':
                 case 'fstat':
                 case 'ftruncate':
-                    return call_user_func_array([$file, substr($this->operation, 1)], $this->args);
+                    return [$file, substr($this->operation, 1)](...$this->args);
 
                 case 'fclose':
                     $environment->delete($id);
@@ -100,7 +99,7 @@ class FileTask implements Task
             case 'chmod':
             case 'chown':
             case 'chgrp':
-                return call_user_func_array([$this, $this->operation], $this->args);
+                return [$this, $this->operation](...$this->args);
 
             default:
                 throw new InvalidArgumentError('Invalid operation.');
@@ -114,7 +113,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function unlink($path)
+    private function unlink(string $path): bool
     {
         if (!@unlink($path)) {
             $message = 'Could not unlink file.';
@@ -135,7 +134,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function rename($oldPath, $newPath)
+    private function rename(string $oldPath, string $newPath): bool
     {
         if (!@rename($oldPath, $newPath)) {
             $message = 'Could not rename file.';
@@ -155,7 +154,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function stat($path)
+    private function stat(string $path): array
     {
         $result = @stat($path);
 
@@ -175,7 +174,7 @@ class FileTask implements Task
      *
      * @return bool
      */
-    private function isfile($path)
+    private function isfile(string $path): bool
     {
         return is_file($path);
     }
@@ -185,7 +184,7 @@ class FileTask implements Task
      *
      * @return bool
      */
-    private function isdir($path)
+    private function isdir(string $path): bool
     {
         return is_dir($path);
     }
@@ -198,7 +197,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function copy($source, $target)
+    private function copy(string $source, string $target): int
     {
         if (!@copy($source, $target)) {
             $message = 'Could not copy file.';
@@ -219,7 +218,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function link($source, $target)
+    private function link(string $source, string $target): bool
     {
         if (!@link($source, $target)) {
             $message = 'Could not create link.';
@@ -240,7 +239,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function symlink($source, $target)
+    private function symlink(string $source, string $target): bool
     {
         if (!@symlink($source, $target)) {
             $message = 'Could not create symlink.';
@@ -260,7 +259,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function readlink($path)
+    private function readlink(string $path): string
     {
         $result = @readlink($path);
 
@@ -283,7 +282,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function mkdir($path, $mode = 0755)
+    private function mkdir(string $path, int $mode = 0755): bool
     {
         if (!@mkdir($path, $mode)) {
             $message = 'Could not create directory.';
@@ -303,7 +302,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function lsdir($path)
+    private function lsdir(string $path): array
     {
         $result = @scandir($path);
 
@@ -325,7 +324,7 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function rmdir($path)
+    private function rmdir(string $path): bool
     {
         if (!@rmdir($path)) {
             $message = 'Could not remove directory.';
@@ -346,9 +345,9 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function chown($path, $owner)
+    private function chown(string $path, int $owner): bool
     {
-        if (!@chown($path, (int) $owner)) {
+        if (!@chown($path, $owner)) {
             $message = 'Could not change file owner.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
@@ -367,9 +366,9 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function chgrp($path, $group)
+    private function chgrp(string $path, int $group): bool
     {
-        if (!@chgrp($path, (int) $group)) {
+        if (!@chgrp($path, $group)) {
             $message = 'Could not change file group.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);
@@ -388,9 +387,9 @@ class FileTask implements Task
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function chmod($path, $mode)
+    private function chmod(string $path, int $mode): bool
     {
-        if (!@chmod($path, (int) $mode)) {
+        if (!@chmod($path, $mode)) {
             $message = 'Could not change file mode.';
             if ($error = error_get_last()) {
                 $message .= sprintf(' Errno: %d; %s', $error['type'], $error['message']);

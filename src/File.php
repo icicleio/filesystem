@@ -1,8 +1,7 @@
 <?php
 namespace Icicle\File;
 
-use Icicle\Stream\DuplexStream;
-use Icicle\Stream\SeekableStream;
+use Icicle\Stream\{DuplexStream, SeekableStream};
 
 interface File extends DuplexStream, SeekableStream
 {
@@ -13,12 +12,12 @@ interface File extends DuplexStream, SeekableStream
      *
      * @return string
      */
-    public function getPath();
+    public function getPath(): string;
 
     /**
      * @return bool
      */
-    public function eof();
+    public function eof(): bool;
 
     /**
      * @coroutine
@@ -29,7 +28,7 @@ interface File extends DuplexStream, SeekableStream
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function stat();
+    public function stat(): \Generator;
 
     /**
      * @coroutine
@@ -42,7 +41,7 @@ interface File extends DuplexStream, SeekableStream
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function truncate($size);
+    public function truncate(int $size): \Generator;
 
     /**
      * @coroutine
@@ -55,7 +54,7 @@ interface File extends DuplexStream, SeekableStream
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function copy($path);
+    public function copy(string $path): \Generator;
 
     /**
      * @coroutine
@@ -68,7 +67,7 @@ interface File extends DuplexStream, SeekableStream
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function chown($uid);
+    public function chown(int $uid): \Generator;
 
     /**
      * @coroutine
@@ -81,7 +80,7 @@ interface File extends DuplexStream, SeekableStream
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function chgrp($gid);
+    public function chgrp(int $gid): \Generator;
 
     /**
      * @coroutine
@@ -94,5 +93,5 @@ interface File extends DuplexStream, SeekableStream
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function chmod($mode);
+    public function chmod(int $mode): \Generator;
 }

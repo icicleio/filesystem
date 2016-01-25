@@ -67,7 +67,7 @@ class ConcurrentFile implements File
      * @param int $size
      * @param bool $append
      */
-    public function __construct(Worker $worker, $id, $path, $size, $append = false)
+    public function __construct(Worker $worker, int $id, string $path, int $size, bool $append = false)
     {
         $this->worker = $worker;
         $this->id = $id;
@@ -89,7 +89,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function getPath()
+    public function getPath(): string
     {
         return $this->path;
     }
@@ -97,7 +97,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function isOpen()
+    public function isOpen(): bool
     {
         return $this->open;
     }
@@ -126,7 +126,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function eof()
+    public function eof(): bool
     {
         return $this->position === $this->size;
     }
@@ -134,13 +134,12 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function read($length = 0, $byte = null, $timeout = 0)
+    public function read(int $length = 0, string $byte = null, float $timeout = 0): \Generator
     {
         if (!$this->isReadable()) {
             throw new UnreadableException('The file is no longer readable.');
         }
 
-        $length = (int) $length;
         if (0 > $length) {
             throw new InvalidArgumentError('The length must be a non-negative integer.');
         }
@@ -156,30 +155,29 @@ class ConcurrentFile implements File
         }
 
         try {
-            $data = (yield $awaitable);
+            $data = yield $awaitable;
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Reading from the file failed.', $exception);
         }
 
-        $byte = (string) $byte;
         $byte = strlen($byte) ? $byte[0] : null;
 
         if (null !== $byte && false !== ($position = strpos($data, $byte))) {
             ++$position;
             $data = substr($data, 0, $position);
-            yield $this->seek($this->position + $position);
+            yield from $this->seek($this->position + $position);
         } else {
             $this->position += strlen($data);
         }
 
-        yield $data;
+        return $data;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function isReadable()
+    public function isReadable(): bool
     {
         return $this->isOpen() && !$this->eof();
     }
@@ -187,7 +185,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function write($data, $timeout = 0)
+    public function write(string $data, float $timeout = 0): \Generator
     {
         return $this->send($data, $timeout, false);
     }
@@ -195,7 +193,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function end($data = '', $timeout = 0)
+    public function end(string $data = '', float $timeout = 0): \Generator
     {
         return $this->send($data, $timeout, true);
     }
@@ -213,7 +211,7 @@ class ConcurrentFile implements File
      * @throws \Icicle\File\Exception\FileException
      * @throws \Icicle\Stream\Exception\UnwritableException
      */
-    protected function send($data, $timeout, $end = false)
+    protected function send(string $data, float $timeout, bool $end = false): \Generator
     {
         if (!$this->isWritable()) {
             throw new UnwritableException('The file is no longer writable.');
@@ -240,7 +238,7 @@ class ConcurrentFile implements File
         }
 
         try {
-            $written = (yield $awaitable);
+            $written = yield $awaitable;
 
             if ($this->append) {
                 $this->size += $written;
@@ -250,6 +248,8 @@ class ConcurrentFile implements File
                     $this->size = $this->position;
                 }
             }
+
+            return $written;
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Write to the file failed.', $exception);
@@ -263,7 +263,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function isWritable()
+    public function isWritable(): bool
     {
         return $this->writable;
     }
@@ -271,13 +271,11 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function seek($offset, $whence = SEEK_SET, $timeout = 0)
+    public function seek(int $offset, int $whence = SEEK_SET, float $timeout = 0): \Generator
     {
         if (!$this->isOpen()) {
             throw new UnseekableException('The file is no longer seekable.');
         }
-
-        $offset = (int) $offset;
 
         switch ($whence) {
             case \SEEK_SET:
@@ -306,9 +304,9 @@ class ConcurrentFile implements File
         }
 
         try {
-            $this->position = (yield $this->worker->enqueue(
+            $this->position = yield from $this->worker->enqueue(
                 new Internal\FileTask('fseek', [$this->id, $offset, \SEEK_SET])
-            ));
+            );
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Seeking in the file failed.', $exception);
@@ -318,13 +316,13 @@ class ConcurrentFile implements File
             $this->size = $this->position;
         }
 
-        yield $this->position;
+        return $this->position;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function tell()
+    public function tell(): int
     {
         return $this->position;
     }
@@ -332,7 +330,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function getLength()
+    public function getLength(): int
     {
         return $this->size;
     }
@@ -340,20 +338,18 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function truncate($size)
+    public function truncate(int $size): \Generator
     {
         if (!$this->isReadable() && !$this->isWritable()) {
             throw new FileException('The file is no longer seekable.');
         }
-
-        $size = (int) $size;
 
         if (0 > $size) {
             throw new InvalidArgumentError('The size must be a non-negative integer.');
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask('ftruncate', [$this->id, $size]));
+            yield from $this->worker->enqueue(new Internal\FileTask('ftruncate', [$this->id, $size]));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Truncating the file failed.', $exception);
@@ -365,20 +361,20 @@ class ConcurrentFile implements File
             $this->position = $size;
         }
 
-        yield true;
+        return true;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function stat()
+    public function stat(): \Generator
     {
         if (!$this->isOpen()) {
             throw new FileException('The file has been closed.');
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask('fstat', [$this->id]));
+            return yield from $this->worker->enqueue(new Internal\FileTask('fstat', [$this->id]));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Stating file failed.', $exception);
@@ -388,14 +384,14 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function copy($path)
+    public function copy(string $path): \Generator
     {
         if (!$this->isOpen()) {
             throw new FileException('The file has been closed.');
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask('copy', [$this->path, (string) $path]));
+            return yield from $this->worker->enqueue(new Internal\FileTask('copy', [$this->path, $path]));
         } catch (TaskException $exception) {
             throw new FileTaskException('Copying the file failed.', $exception);
         }
@@ -404,7 +400,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function chown($uid)
+    public function chown(int $uid): \Generator
     {
         return $this->change('chown', $uid);
     }
@@ -412,7 +408,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function chgrp($group)
+    public function chgrp(int $group): \Generator
     {
         return $this->change('chgrp', $group);
     }
@@ -420,7 +416,7 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
-    public function chmod($mode)
+    public function chmod(int $mode): \Generator
     {
         return $this->change('chmod', $mode);
     }
@@ -433,14 +429,14 @@ class ConcurrentFile implements File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function change($operation, $value)
+    private function change(string $operation, int $value): \Generator
     {
         if (!$this->isOpen()) {
             throw new FileException('The file has been closed.');
         }
 
         try {
-            yield $this->worker->enqueue(new Internal\FileTask($operation, [$this->path, (int) $value]));
+            return yield from $this->worker->enqueue(new Internal\FileTask($operation, [$this->path, $value]));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException(sprintf('%s failed.', $operation), $exception);

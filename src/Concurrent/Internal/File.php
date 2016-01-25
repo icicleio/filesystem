@@ -26,7 +26,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function __construct($path, $mode)
+    public function __construct(string $path, string $mode)
     {
         $mode = str_replace(['b', 't'], '', $mode);
 
@@ -71,7 +71,7 @@ class File
     /**
      * @return int
      */
-    public function getId()
+    public function getId(): int
     {
         return (int) $this->handle;
     }
@@ -79,7 +79,7 @@ class File
     /**
      * @return bool
      */
-    public function inAppendMode()
+    public function inAppendMode(): bool
     {
         return 'a' === $this->mode || 'a+' === $this->mode;
     }
@@ -91,7 +91,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function read($length)
+    public function read(int $length): string
     {
         $data = @fread($this->handle, $length);
 
@@ -113,7 +113,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function write($data)
+    public function write(string $data): int
     {
         $length = strlen($data);
 
@@ -142,7 +142,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function seek($offset, $whence = \SEEK_SET)
+    public function seek(int $offset, int $whence = \SEEK_SET): int
     {
         if (-1 === fseek($this->handle, $offset, $whence)) {
             $message = 'Could not move file pointer.';
@@ -170,7 +170,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function tell()
+    public function tell(): int
     {
         $position = ftell($this->handle);
 
@@ -190,7 +190,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function size()
+    public function size(): int
     {
         return $this->stat()['size'];
     }
@@ -200,7 +200,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function stat()
+    public function stat(): array
     {
         $result = fstat($this->handle);
 
@@ -222,7 +222,7 @@ class File
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    public function truncate($size)
+    public function truncate(int $size): bool
     {
         if (!ftruncate($this->handle, (int) $size)) {
             $message = 'Could not truncate file.';

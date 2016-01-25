@@ -2,6 +2,7 @@
 namespace Icicle\File\Eio;
 
 use Icicle\Loop;
+use Icicle\Loop\Watcher\Io;
 
 class EioPoll
 {
@@ -45,7 +46,7 @@ class EioPoll
         $this->poll->free();
     }
 
-    private function createPoll()
+    private function createPoll(): Io
     {
         return Loop\poll(\eio_get_event_stream(), function () {
             while (\eio_npending()) {

@@ -2,8 +2,7 @@
 namespace Icicle\File\Eio;
 
 use Icicle\Awaitable\Delayed;
-use Icicle\File\Driver;
-use Icicle\File\Exception\FileException;
+use Icicle\File\{Driver, Exception\FileException};
 use Icicle\Loop;
 
 class EioDriver implements Driver
@@ -35,7 +34,7 @@ class EioDriver implements Driver
     /**
      * @return bool
      */
-    public static function enabled()
+    public static function enabled(): bool
     {
         return \extension_loaded('eio');
     }
@@ -57,7 +56,7 @@ class EioDriver implements Driver
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function makeFlags($mode)
+    private function makeFlags(string $mode): int
     {
         return \EIO_O_NONBLOCK | \EIO_O_FSYNC | $this->parseMode($mode);
     }
@@ -69,7 +68,7 @@ class EioDriver implements Driver
      *
      * @throws \Icicle\File\Exception\FileException
      */
-    private function parseMode($mode)
+    private function parseMode(string $mode): int
     {
         $mode = str_replace(['b', 't'], '', $mode);
 
@@ -93,7 +92,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function open($path, $mode)
+    public function open(string $path, string $mode): \Generator
     {
         $flags = $this->makeFlags($mode);
         $chmod = ($flags & \EIO_O_CREAT) ? 0644 : 0;
@@ -112,7 +111,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            $handle = (yield $delayed);
+            $handle = yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -134,21 +133,21 @@ class EioDriver implements Driver
             $this->poll->listen();
 
             try {
-                $size = (yield $delayed);
+                $size = yield $delayed;
             } finally {
                 $this->poll->done();
             }
         }
 
-        yield new EioFile($this->poll, $handle, $path, $size, (bool) ($flags & \EIO_O_APPEND));
+        return new EioFile($this->poll, $handle, $path, $size, (bool) ($flags & \EIO_O_APPEND));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function unlink($path)
+    public function unlink(string $path): \Generator
     {
-        if (!(yield $this->isFile($path))) { // Ensure file exists before attempting to unlink.
+        if (!(yield from $this->isFile($path))) { // Ensure file exists before attempting to unlink.
             throw new FileException('File does not exist or is a directory.');
         }
 
@@ -166,7 +165,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -175,7 +174,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function rename($oldPath, $newPath)
+    public function rename(string $oldPath, string $newPath): \Generator
     {
         $delayed = new Delayed();
         \eio_rename($oldPath, $newPath, null, function (Delayed $delayed, $result, $req) {
@@ -191,7 +190,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -200,7 +199,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function stat($path)
+    public function stat(string $path): \Generator
     {
         $delayed = new Delayed();
         \eio_stat($path, null, function (Delayed $delayed, $result, $req) {
@@ -216,7 +215,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            $stat = (yield $delayed);
+            $stat = yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -226,39 +225,39 @@ class EioDriver implements Driver
             $numeric[$key] = $stat[$name];
         }
 
-        yield array_merge($numeric, $stat);
+        return array_merge($numeric, $stat);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function isFile($path)
+    public function isFile(string $path): \Generator
     {
         try {
-            $result = (yield $this->stat($path));
-            yield (bool) ($result['mode'] & \EIO_S_IFREG);
+            $result = yield from $this->stat($path);
+            return (bool) ($result['mode'] & \EIO_S_IFREG);
         } catch (FileException $exception) {
-            yield false;
+            return false;
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function isDir($path)
+    public function isDir(string $path): \Generator
     {
         try {
-            $result = (yield $this->stat($path));
-            yield !($result['mode'] & \EIO_S_IFREG);
+            $result = yield from $this->stat($path);
+            return !($result['mode'] & \EIO_S_IFREG);
         } catch (FileException $exception) {
-            yield false;
+            return false;
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function link($source, $target)
+    public function link(string $source, string $target): \Generator
     {
         return $this->doLink($source, $target, true);
     }
@@ -266,7 +265,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function symlink($source, $target)
+    public function symlink(string $source, string $target): \Generator
     {
         return $this->doLink($source, $target, false);
     }
@@ -274,7 +273,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    private function doLink($source, $target, $hard)
+    private function doLink(string $source, string $target, bool $hard): \Generator
     {
         $callback = function (Delayed $delayed, $result, $req) {
             if (-1 === $result) {
@@ -297,7 +296,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -306,7 +305,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function readlink($path)
+    public function readlink(string $path): \Generator
     {
         $delayed = new Delayed();
         \eio_readlink($path, null, function (Delayed $delayed, $result, $req) {
@@ -322,7 +321,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -331,19 +330,19 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function copy($source, $target)
+    public function copy(string $source, string $target): \Generator
     {
         /** @var \Icicle\File\Eio\EioFile $file */
-        $file = (yield $this->open($source, 'r'));
-        $written = (yield $file->copy($target));
+        $file = yield from $this->open($source, 'r');
+        $written = yield from $file->copy($target);
         $file->close();
-        yield $written;
+        return $written;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function mkDir($path, $mode = 0755)
+    public function mkDir(string $path, int $mode = 0755): \Generator
     {
         $delayed = new Delayed();
         \eio_mkdir($path, $mode, null, function (Delayed $delayed, $result, $req) {
@@ -359,7 +358,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -368,7 +367,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function lsDir($path)
+    public function lsDir(string $path): \Generator
     {
         $delayed = new Delayed();
         \eio_readdir($path, 0, null, function (Delayed $delayed, $result, $req) {
@@ -386,7 +385,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -395,7 +394,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function rmDir($path)
+    public function rmDir(string $path): \Generator
     {
         $delayed = new Delayed();
         \eio_rmdir($path, null, function (Delayed $delayed, $result, $req) {
@@ -411,7 +410,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -420,7 +419,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function chown($path, $uid)
+    public function chown(string $path, int $uid): \Generator
     {
         return $this->chowngrp($path, $uid, -1);
     }
@@ -428,7 +427,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function chgrp($path, $gid)
+    public function chgrp(string $path, int $gid): \Generator
     {
         return $this->chowngrp($path, -1, $gid);
     }
@@ -443,7 +442,7 @@ class EioDriver implements Driver
      *
      * @resolve bool
      */
-    private function chowngrp($path, $uid, $gid)
+    private function chowngrp(string $path, int $uid, int $gid): \Generator
     {
         $delayed = new Delayed();
         \eio_chown($path, $uid, $gid, null, function (Delayed $delayed, $result, $req) {
@@ -459,7 +458,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -468,7 +467,7 @@ class EioDriver implements Driver
     /**
      * {@inheritdoc}
      */
-    public function chmod($path, $mode)
+    public function chmod(string $path, int $mode): \Generator
     {
         $delayed = new Delayed();
         \eio_chmod($path, $mode, null, function (Delayed $delayed, $result, $req) {
@@ -484,7 +483,7 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            yield $delayed;
+            return yield $delayed;
         } finally {
             $this->poll->done();
         }
@@ -493,7 +492,7 @@ class EioDriver implements Driver
     /**
      * @return string[]
      */
-    public static function getStatKeys()
+    public static function getStatKeys(): array
     {
         return self::$statKeys;
     }
