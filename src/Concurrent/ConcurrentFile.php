@@ -248,8 +248,6 @@ class ConcurrentFile implements File
                     $this->size = $this->position;
                 }
             }
-
-            return $written;
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Write to the file failed.', $exception);
@@ -258,6 +256,8 @@ class ConcurrentFile implements File
                 $this->close();
             }
         }
+
+        return $written;
     }
 
     /**

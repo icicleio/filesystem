@@ -244,7 +244,7 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            return yield $awaitable;
+            $result = yield $awaitable;
         } catch (\Exception $exception) {
             $this->close();
             throw $exception;
@@ -254,6 +254,8 @@ class EioFile implements File
             }
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -398,11 +400,11 @@ class EioFile implements File
             if ($this->position > $size) {
                 $this->position = $size;
             }
-
-            return $result;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -489,10 +491,12 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -518,10 +522,12 @@ class EioFile implements File
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**

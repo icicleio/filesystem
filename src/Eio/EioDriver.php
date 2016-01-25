@@ -165,10 +165,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -190,10 +192,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -296,10 +300,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -321,10 +327,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -358,10 +366,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -385,10 +395,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -410,10 +422,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -458,10 +472,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
@@ -483,10 +499,12 @@ class EioDriver implements Driver
         $this->poll->listen();
 
         try {
-            return yield $delayed;
+            $result = yield $delayed;
         } finally {
             $this->poll->done();
         }
+
+        return $result;
     }
 
     /**
