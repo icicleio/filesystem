@@ -6,8 +6,8 @@ php:
 sudo: false
 
 install:
-  - curl -LS https://pecl.php.net/get/eio | tar -xz;
-    pushd eio-*;
+  - git clone https://bitbucket.org/osmanov/pecl-eio;
+    pushd pecl-eio;
     phpize;
     ./configure;
     make;
