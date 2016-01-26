@@ -198,7 +198,7 @@ class EioFile implements File
     /**
      * {@inheritdoc}
      */
-    public function end(string $data = '', float $timeout = 0)
+    public function end(string $data = '', float $timeout = 0): \Generator
     {
         return $this->send($data, $timeout, true);
     }
