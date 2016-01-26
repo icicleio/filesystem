@@ -28,7 +28,7 @@ class EioDriver implements Driver
     ];
 
     /**
-     * @var \Icicle\File\Eio\EioPoll
+     * @var \Icicle\File\Eio\Internal\EioPoll
      */
     private $poll;
 
@@ -47,7 +47,7 @@ class EioDriver implements Driver
             throw new FileException('Requires the eio extension.');
         } // @codeCoverageIgnoreEnd
 
-        $this->poll = new EioPoll();
+        $this->poll = new Internal\EioPoll();
     }
 
     /**
