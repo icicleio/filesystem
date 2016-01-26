@@ -43,12 +43,9 @@ class FileTask implements Task
     {
         if ('f' === $this->operation[0]) {
             if ('fopen' === $this->operation) {
-                if ($environment->exists($this->args[0])) {
-                    throw new FileException('The file handle has already been opened on the worker.');
-                }
                 $file = new File($this->args[0], $this->args[1]);
                 $id = $file->getId();
-                $environment->set('file' . $id, $file);
+                $environment->set($this->makeId($id), $file);
                 return [$id, $file->stat()['size'], $file->inAppendMode()];
             }
 
@@ -56,7 +53,7 @@ class FileTask implements Task
                 throw new FileException('No file ID provided.');
             }
 
-            $id = 'file' . array_shift($this->args);
+            $id = $this->makeId(array_shift($this->args));
 
             if (!$environment->exists($id)) {
                 throw new FileException('No file handle with the given ID has been opened on the worker.');
@@ -104,6 +101,16 @@ class FileTask implements Task
             default:
                 throw new InvalidArgumentError('Invalid operation.');
         }
+    }
+
+    /**
+     * @param int $id
+     *
+     * @return string
+     */
+    private function makeId(int $id): string
+    {
+        return '__file_' . $id;
     }
 
     /**

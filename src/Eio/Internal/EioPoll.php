@@ -1,5 +1,5 @@
 <?php
-namespace Icicle\File\Eio;
+namespace Icicle\File\Eio\Internal;
 
 use Icicle\Loop;
 use Icicle\Loop\Watcher\Io;

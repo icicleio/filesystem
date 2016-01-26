@@ -10,7 +10,7 @@ use Icicle\Stream\Exception\{OutOfBoundsException, UnreadableException, Unseekab
 class EioFile implements File
 {
     /**
-     * @var \Icicle\File\Eio\EioPoll
+     * @var \Icicle\File\Eio\Internal\EioPoll
      */
     private $poll;
 
@@ -50,13 +50,13 @@ class EioFile implements File
     private $writable = true;
 
     /**
-     * @param \Icicle\File\Eio\EioPoll $poll
+     * @param \Icicle\File\Eio\Internal\EioPoll $poll
      * @param int $handle
      * @param string $path
      * @param int $size
      * @param bool $append
      */
-    public function __construct(EioPoll $poll, int $handle, string $path, int $size, bool $append = false)
+    public function __construct(Internal\EioPoll $poll, int $handle, string $path, int $size, bool $append = false)
     {
         $this->poll = $poll;
         $this->handle = $handle;
