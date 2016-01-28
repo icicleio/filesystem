@@ -24,7 +24,12 @@ abstract class AbstractFileTest extends TestCase
      *
      * @return \Icicle\File\File
      */
-    abstract protected function openFile($path, $mode = 'r+');
+    protected function openFile($path, $mode = 'r+')
+    {
+        $coroutine = new Coroutine($this->getDriver()->open($path, $mode));
+
+        return $coroutine->wait();
+    }
 
     public function setUp()
     {
