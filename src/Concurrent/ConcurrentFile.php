@@ -108,7 +108,7 @@ class ConcurrentFile implements File
     public function close()
     {
         if ($this->open && $this->worker->isRunning()) {
-            $coroutine = new Coroutine($this->worker->enqueue(new Internal\FileTask('fclose', [$this->id])));
+            $coroutine = new Coroutine($this->worker->enqueue(new Internal\FileTask('fclose', [], $this->id)));
             $coroutine->done(null, [$this->worker, 'kill']);
         }
 
@@ -148,7 +148,7 @@ class ConcurrentFile implements File
             $length = self::CHUNK_SIZE;
         }
 
-        $awaitable = new Coroutine($this->worker->enqueue(new Internal\FileTask('fread', [$this->id, $length])));
+        $awaitable = new Coroutine($this->worker->enqueue(new Internal\FileTask('fread', [$length], $this->id)));
 
         if ($timeout) {
             $awaitable = $awaitable->timeout($timeout);
@@ -217,7 +217,7 @@ class ConcurrentFile implements File
             throw new UnwritableException('The file is no longer writable.');
         }
 
-        $task = new Internal\FileTask('fwrite', [$this->id, (string) $data]);
+        $task = new Internal\FileTask('fwrite', [$data], $this->id);
 
         if ($this->queue->isEmpty()) {
             $awaitable = new Coroutine($this->worker->enqueue($task));
@@ -305,7 +305,7 @@ class ConcurrentFile implements File
 
         try {
             $this->position = yield from $this->worker->enqueue(
-                new Internal\FileTask('fseek', [$this->id, $offset, \SEEK_SET])
+                new Internal\FileTask('fseek', [$offset, \SEEK_SET], $this->id)
             );
         } catch (TaskException $exception) {
             $this->close();
@@ -349,7 +349,7 @@ class ConcurrentFile implements File
         }
 
         try {
-            yield from $this->worker->enqueue(new Internal\FileTask('ftruncate', [$this->id, $size]));
+            yield from $this->worker->enqueue(new Internal\FileTask('ftruncate', [$size], $this->id));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Truncating the file failed.', $exception);
@@ -374,7 +374,7 @@ class ConcurrentFile implements File
         }
 
         try {
-            return yield from $this->worker->enqueue(new Internal\FileTask('fstat', [$this->id]));
+            return yield from $this->worker->enqueue(new Internal\FileTask('fstat', [], $this->id));
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Stating file failed.', $exception);

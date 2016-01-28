@@ -13,17 +13,23 @@ class FileTask implements Task
     private $operation;
 
     /**
-     * @var int
+     * @var mixed[]
      */
     private $args;
 
     /**
+     * @var string|null
+     */
+    private $id;
+
+    /**
      * @param string $operation
      * @param array $args
+     * @param int $id File ID.
      *
      * @throws \Icicle\Exception\InvalidArgumentError
      */
-    public function __construct(string $operation, array $args = [])
+    public function __construct(string $operation, array $args = [], int $id = 0)
     {
         if (!strlen($operation)) {
             throw new InvalidArgumentError('Operation must be a non-empty string.');
@@ -31,6 +37,10 @@ class FileTask implements Task
 
         $this->operation = $operation;
         $this->args = $args;
+
+        if (0 !== $id) {
+            $this->id = $this->makeId($id);
+        }
     }
 
     /**
@@ -49,17 +59,15 @@ class FileTask implements Task
                 return [$id, $file->stat()['size'], $file->inAppendMode()];
             }
 
-            if (!isset($this->args[0])) {
+            if (null === $this->id) {
                 throw new FileException('No file ID provided.');
             }
 
-            $id = $this->makeId(array_shift($this->args));
-
-            if (!$environment->exists($id)) {
+            if (!$environment->exists($this->id)) {
                 throw new FileException('No file handle with the given ID has been opened on the worker.');
             }
 
-            if (!($file = $environment->get($id)) instanceof File) {
+            if (!($file = $environment->get($this->id)) instanceof File) {
                 throw new FileException('File storage found in inconsistent state.');
             }
 
@@ -72,7 +80,7 @@ class FileTask implements Task
                     return [$file, substr($this->operation, 1)](...$this->args);
 
                 case 'fclose':
-                    $environment->delete($id);
+                    $environment->delete($this->id);
                     return true;
 
                 default:
