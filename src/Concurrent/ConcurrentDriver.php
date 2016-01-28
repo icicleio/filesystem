@@ -5,7 +5,7 @@ use Icicle\Concurrent\Exception\TaskException;
 use Icicle\Concurrent\Worker;
 use Icicle\Concurrent\Worker\Pool;
 use Icicle\File\Driver;
-use Icicle\File\Exception\FileTaskException;
+use Icicle\File\Exception\FileException;
 
 class ConcurrentDriver implements Driver
 {
@@ -37,7 +37,7 @@ class ConcurrentDriver implements Driver
         try {
             list($id, $size, $append) = (yield $worker->enqueue($task));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Opening the file failed.', $exception);
+            throw new FileException('Opening the file failed.', $exception);
         }
 
         yield new ConcurrentFile($worker, $id, $path, $size, $append);
@@ -51,7 +51,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('unlink', [(string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Unlinking the file failed.', $exception);
+            throw new FileException('Unlinking the file failed.', $exception);
         }
     }
 
@@ -63,7 +63,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('stat', [(string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Stating the file failed.', $exception);
+            throw new FileException('Stating the file failed.', $exception);
         }
     }
 
@@ -75,7 +75,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('rename', [(string) $oldPath, (string) $newPath]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Renaming the file failed.', $exception);
+            throw new FileException('Renaming the file failed.', $exception);
         }
     }
 
@@ -87,7 +87,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('isfile', [(string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Determining if path is a file failed.', $exception);
+            throw new FileException('Determining if path is a file failed.', $exception);
         }
     }
 
@@ -99,7 +99,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('isdir', [(string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Determine if the path is a directory failed.', $exception);
+            throw new FileException('Determine if the path is a directory failed.', $exception);
         }
     }
 
@@ -111,7 +111,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('link', [(string) $source, (string) $target]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Creating the link failed.', $exception);
+            throw new FileException('Creating the link failed.', $exception);
         }
     }
 
@@ -123,7 +123,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('symlink', [(string) $source, (string) $target]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Creating the symlink failed.', $exception);
+            throw new FileException('Creating the symlink failed.', $exception);
         }
     }
 
@@ -135,7 +135,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('readlink', [(string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Reading the symlink failed.', $exception);
+            throw new FileException('Reading the symlink failed.', $exception);
         }
     }
 
@@ -147,7 +147,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('copy', [(string) $source, (string) $target]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Copying the file failed.', $exception);
+            throw new FileException('Copying the file failed.', $exception);
         }
     }
 
@@ -159,7 +159,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('mkdir', [(string) $path, (int) $mode]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Creating the directory failed.', $exception);
+            throw new FileException('Creating the directory failed.', $exception);
         }
     }
 
@@ -171,7 +171,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('lsdir', [(string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Reading the directory failed.', $exception);
+            throw new FileException('Reading the directory failed.', $exception);
         }
     }
 
@@ -183,7 +183,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('rmdir', [(string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Reading the directory failed.', $exception);
+            throw new FileException('Reading the directory failed.', $exception);
         }
     }
 
@@ -195,7 +195,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('chmod', [(string) $path, (int) $mode]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Creating the directory failed.', $exception);
+            throw new FileException('Creating the directory failed.', $exception);
         }
     }
 
@@ -207,7 +207,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('chown', [(string) $path, (int) $uid]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Creating the directory failed.', $exception);
+            throw new FileException('Creating the directory failed.', $exception);
         }
     }
 
@@ -219,7 +219,7 @@ class ConcurrentDriver implements Driver
         try {
             yield $this->pool->enqueue(new Internal\FileTask('chgrp', [(string) $path, (int) $gid]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Creating the directory failed.', $exception);
+            throw new FileException('Creating the directory failed.', $exception);
         }
     }
 }

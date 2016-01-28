@@ -6,7 +6,6 @@ use Icicle\Concurrent\Worker\Worker;
 use Icicle\Coroutine\Coroutine;
 use Icicle\Exception\InvalidArgumentError;
 use Icicle\File\Exception\FileException;
-use Icicle\File\Exception\FileTaskException;
 use Icicle\File\File;
 use Icicle\Stream\Exception\OutOfBoundsException;
 use Icicle\Stream\Exception\UnreadableException;
@@ -159,7 +158,7 @@ class ConcurrentFile implements File
             $data = (yield $awaitable);
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileTaskException('Reading from the file failed.', $exception);
+            throw new FileException('Reading from the file failed.', $exception);
         }
 
         $byte = (string) $byte;
@@ -252,7 +251,7 @@ class ConcurrentFile implements File
             }
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileTaskException('Write to the file failed.', $exception);
+            throw new FileException('Write to the file failed.', $exception);
         } finally {
             if ($end) {
                 $this->close();
@@ -317,7 +316,7 @@ class ConcurrentFile implements File
             $this->position = (yield $awaitable);
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileTaskException('Seeking in the file failed.', $exception);
+            throw new FileException('Seeking in the file failed.', $exception);
         }
 
         if ($this->position > $this->size) {
@@ -362,7 +361,7 @@ class ConcurrentFile implements File
             yield $this->worker->enqueue(new Internal\FileTask('ftruncate', [$size], $this->id));
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileTaskException('Truncating the file failed.', $exception);
+            throw new FileException('Truncating the file failed.', $exception);
         }
 
         $this->size = $size;
@@ -387,7 +386,7 @@ class ConcurrentFile implements File
             yield $this->worker->enqueue(new Internal\FileTask('fstat', [], $this->id));
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileTaskException('Stating file failed.', $exception);
+            throw new FileException('Stating file failed.', $exception);
         }
     }
 
@@ -403,7 +402,7 @@ class ConcurrentFile implements File
         try {
             yield $this->worker->enqueue(new Internal\FileTask('copy', [$this->path, (string) $path]));
         } catch (TaskException $exception) {
-            throw new FileTaskException('Copying the file failed.', $exception);
+            throw new FileException('Copying the file failed.', $exception);
         }
     }
 
@@ -449,7 +448,7 @@ class ConcurrentFile implements File
             yield $this->worker->enqueue(new Internal\FileTask($operation, [$this->path, (int) $value]));
         } catch (TaskException $exception) {
             $this->close();
-            throw new FileTaskException(sprintf('%s failed.', $operation), $exception);
+            throw new FileException(sprintf('%s failed.', $operation), $exception);
         }
     }
 }
