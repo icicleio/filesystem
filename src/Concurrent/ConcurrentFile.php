@@ -305,10 +305,16 @@ class ConcurrentFile implements File
             $this->size = $this->position;
         }
 
+        $awaitable = new Coroutine(
+            $this->worker->enqueue(new Internal\FileTask('fseek', [$offset, \SEEK_SET], $this->id))
+        );
+
+        if ($timeout) {
+            $awaitable = $awaitable->timeout($timeout);
+        }
+
         try {
-            $this->position = (yield $this->worker->enqueue(
-                new Internal\FileTask('fseek', [$offset, \SEEK_SET], $this->id)
-            ));
+            $this->position = (yield $awaitable);
         } catch (TaskException $exception) {
             $this->close();
             throw new FileTaskException('Seeking in the file failed.', $exception);
