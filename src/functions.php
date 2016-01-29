@@ -25,6 +25,8 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
 
     /**
      * @return \Icicle\File\Driver
+     *
+     * @codeCoverageIgnore
      */
     function create()
     {
@@ -49,15 +51,17 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     function get($path)
     {
         /** @var \Icicle\File\File $file */
-        $file = (yield driver()->open($path, 'r'));
+        $file = (yield open($path, 'r'));
 
         $data = '';
 
-        while (!$file->eof()) {
-            $data .= (yield $file->read());
+        try {
+            while (!$file->eof()) {
+                $data .= (yield $file->read());
+            }
+        } finally {
+            $file->close();
         }
-
-        $file->close();
 
         yield $data;
     }
@@ -78,11 +82,13 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     function put($path, $data, $append = false)
     {
         /** @var \Icicle\File\File $file */
-        $file = (yield driver()->open($path, $append ? 'a' : 'w'));
+        $file = (yield open($path, $append ? 'a' : 'w'));
 
-        $written = (yield $file->write($data));
-
-        $file->close();
+        try {
+            $written = (yield $file->write($data));
+        } finally {
+            $file->close();
+        }
 
         yield $written;
     }
