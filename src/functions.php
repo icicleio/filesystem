@@ -24,6 +24,8 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
 
     /**
      * @return \Icicle\File\Driver
+     *
+     * @codeCoverageIgnore
      */
     function create(): Driver
     {
@@ -48,15 +50,17 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     function get(string $path): \Generator
     {
         /** @var \Icicle\File\File $file */
-        $file = yield from driver()->open($path, 'r');
+        $file = yield from open($path, 'r');
 
         $data = '';
 
-        while (!$file->eof()) {
-            $data .= yield from $file->read();
+        try {
+            while (!$file->eof()) {
+                $data .= yield from $file->read();
+            }
+        } finally {
+            $file->close();
         }
-
-        $file->close();
 
         return $data;
     }
@@ -77,11 +81,13 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
     function put(string $path, string $data, bool $append = false): \Generator
     {
         /** @var \Icicle\File\File $file */
-        $file = yield from driver()->open($path, $append ? 'a' : 'w');
+        $file = yield from open($path, $append ? 'a' : 'w');
 
-        $written = yield from $file->write($data);
-
-        $file->close();
+        try {
+            $written = yield from $file->write($data);
+        } finally {
+            $file->close();
+        }
 
         return $written;
     }
@@ -234,7 +240,7 @@ if (!\function_exists(__NAMESPACE__ . '\driver')) {
      */
     function isFile(string $path): \Generator
     {
-        return driver()->isfile($path);
+        return driver()->isFile($path);
     }
 
     /**

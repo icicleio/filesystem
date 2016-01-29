@@ -2,7 +2,6 @@
 namespace Icicle\Tests\File\Concurrent;
 
 use Icicle\Concurrent\Worker\DefaultPool;
-use Icicle\Coroutine\Coroutine;
 use Icicle\File\Concurrent\ConcurrentDriver;
 use Icicle\Tests\File\AbstractFileTest;
 
@@ -15,7 +14,7 @@ class ConcurrentFileTest extends AbstractFileTest
 
     public function setUp()
     {
-        $this->pool = new DefaultPool();
+        $this->pool = $this->createPool();
         parent::setUp();
     }
 
@@ -28,17 +27,18 @@ class ConcurrentFileTest extends AbstractFileTest
     }
 
     /**
-     * @var \Icicle\File\Driver
+     * @return \Icicle\Concurrent\Worker\DefaultPool
+     */
+    public function createPool()
+    {
+        return new DefaultPool();
+    }
+
+    /**
+     * @return \Icicle\File\Driver
      */
     protected function createDriver()
     {
         return new ConcurrentDriver($this->pool);
-    }
-
-    protected function openFile($path, $mode = 'r+')
-    {
-        $coroutine = new Coroutine($this->getDriver()->open($path, $mode));
-
-        return $coroutine->wait();
     }
 }
