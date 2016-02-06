@@ -409,6 +409,23 @@ class ConcurrentFile implements File
     /**
      * {@inheritdoc}
      */
+    public function rename($path)
+    {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
+        try {
+            yield $this->worker->enqueue(new Internal\FileTask('rename', [$this->path, (string) $path]));
+            $this->path = $path;
+        } catch (TaskException $exception) {
+            throw new FileException('Copying the file failed.', $exception);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function chown($uid)
     {
         return $this->change('chown', $uid);

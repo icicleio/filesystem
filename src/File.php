@@ -60,6 +60,19 @@ interface File extends DuplexStream, SeekableStream
     /**
      * @coroutine
      *
+     * @param string $path
+     *
+     * @return \Generator
+     *
+     * @resolve bool
+     *
+     * @throws \Icicle\File\Exception\FileException
+     */
+    public function rename($path);
+
+    /**
+     * @coroutine
+     *
      * @param int $uid
      *
      * @return \Generator

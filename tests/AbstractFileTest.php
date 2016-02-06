@@ -567,4 +567,74 @@ abstract class AbstractFileTest extends TestCase
         $coroutine = new Coroutine($file->chgrp(getmygid()));
         $coroutine->wait();
     }
+
+    public function testCopy()
+    {
+        $path = self::PATH . '.copy';
+
+        $this->createFileWith(self::PATH, self::WRITE_STRING);
+
+        $file = $this->openFile(self::PATH);
+
+        $coroutine = new Coroutine($file->copy($path));
+
+        try {
+            $this->assertSame(strlen(self::WRITE_STRING), $coroutine->wait());
+            $this->assertTrue(is_file($path));
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    /**
+     * @depends testCopy
+     * @expectedException \Icicle\File\Exception\FileException
+     */
+    public function testCopyAfterClose()
+    {
+        $path = self::PATH . '.copy';
+
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $file->close();
+
+        $coroutine = new Coroutine($file->copy($path));
+        $coroutine->wait();
+    }
+
+    public function testRename()
+    {
+        $path = self::PATH . '.rename';
+
+        $this->createFileWith(self::PATH, self::WRITE_STRING);
+
+        $file = $this->openFile(self::PATH);
+
+        $coroutine = new Coroutine($file->rename($path));
+
+        try {
+            $this->assertTrue($coroutine->wait());
+            $this->assertSame($path, $file->getPath());
+            $this->assertTrue(is_file($path));
+            $this->assertFalse(is_file(self::PATH));
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    /**
+     * @depends testCopy
+     * @expectedException \Icicle\File\Exception\FileException
+     */
+    public function testRenameAfterClose()
+    {
+        $path = self::PATH . '.rename';
+
+        $file = $this->openFile(self::PATH, 'w+');
+
+        $file->close();
+
+        $coroutine = new Coroutine($file->rename($path));
+        $coroutine->wait();
+    }
 }

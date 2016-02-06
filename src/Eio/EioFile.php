@@ -531,16 +531,44 @@ class EioFile implements File
     }
 
     /**
-     * @coroutine
-     *
-     * @param string $path
-     *
-     * @return \Generator
-     *
-     * @resolve int
+     * {@inheritdoc}
+     */
+    public function rename($path)
+    {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
+        $delayed = new Delayed();
+        \eio_rename($this->path, $path, null, function (Delayed $delayed, $result, $req) {
+            if (-1 === $result) {
+                $delayed->reject(new FileException(
+                    sprintf('Renaming the file failed: %s.', \eio_get_last_error($req))
+                ));
+            } else {
+                $delayed->resolve(true);
+            }
+        }, $delayed);
+
+        $this->poll->listen();
+
+        try {
+            yield $delayed;
+            $this->path = $path;
+        } finally {
+            $this->poll->done();
+        }
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function copy($path)
     {
+        if (!$this->isOpen()) {
+            throw new FileException('The file has been closed.');
+        }
+
         $delayed = new Delayed();
         \eio_open(
             $path,
